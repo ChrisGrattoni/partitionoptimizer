@@ -7,14 +7,20 @@ Video introduction: https://youtu.be/XJFvY4-FCSc
 
 This program uses a genetic algorithm to optimize a partition of students. In order to evaluate the fitness of a given partition, the algorithm must check the partition against your school's master schedule. You will need to generate a .csv file with the following fields:
      
-        LAST,FIRST,MIDDLE,STUDENT_ID,COURSE_NUMBER,COURSE_NAME,COURSE_ID,ROOM_NUMBER,PERIOD
-        John,Smith,William,000281871,Math435-01,ALGEBRA 2/TRIG,299381878,ROOM 255, PERIOD 1
-        John,Smith,William,000281871,Eng402-01,ADV BRITISH LIT,345342243,ROOM 211, PERIOD 2
-        John,Smith,William,000281871,Hist424-01,AP WORLD HIST,5011222439,ROOM 166, PERIOD 3
-        John,Smith,William,000281871,Chem419-01,AP CHEMISTRY,54441133238,ROOM 200, PERIOD 5
-        John,Smith,William,000281871,Band300-01,MARCHING BAND,4032191878,ROOM 003, PERIOD 6
-        John,Smith,William,000281871,Germ461-01,AP GERMAN LANG,198243981,ROOM 214, PERIOD 7
-        John,Smith,William,000281871,Gym400-01,ADVENTURE EDUCATION,23423,ROOM GYM, PERIOD 8
+        LAST, FIRST, MIDDLE, STUDENT_ID, COURSE_NUMBER, COURSE_NAME, COURSE_ID, ROOM_NUMBER, PERIOD
+		
+The three most important columns in this .csv file are STUDENT_ID, ROOM_NUMBER, and PERIOD. The algorithm uniquely identifies individual students using STUDENT_ID, and courses within a school building are uniquely identified using the pair (ROOM_NUMBER, PERIOD).
+
+This .csv file should have an entry for each student course enrollment. For example, if John Smith is taking 7 classes, then John Smith should have 7 rows in the .csv file:
+
+        LAST, FIRST, MIDDLE, STUDENT_ID, COURSE_NUMBER, COURSE_NAME, COURSE_ID, ROOM_NUMBER, PERIOD
+        John, Smith, William, 000281871, Math435-01,    ALGEBRA 2/TRIG,2381878, ROOM 255,    PERIOD 1
+        John, Smith, William, 000281871, Eng402-01,     ADV BRITISH LIT,342243, ROOM 211,    PERIOD 2
+        John, Smith, William, 000281871, Hist424-01,    AP WORLD HIST,50122439, ROOM 166,    PERIOD 3
+        John, Smith, William, 000281871, Chem419-01,    AP CHEMISTRY,544433238, ROOM 200,    PERIOD 5
+        John, Smith, William, 000281871, Band300-01,    MARCHING BAND,40391878, ROOM 003,    PERIOD 6
+        John, Smith, William, 000281871, Germ461-01,    AP GERMAN LANG,1943981, ROOM 214,    PERIOD 7
+        John, Smith, William, 000281871, Gym400-01,     ADVENTURE EDUCATION,23, ROOM GYM,    PERIOD 8
 
 
         The .csv file should have an entry for each student course enrollment.
