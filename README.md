@@ -5,7 +5,7 @@ Video introduction: https://youtu.be/XJFvY4-FCSc
 
 ### What Does This Program Do?
 
-The Student Partition Optimization Tool for Schools uses a genetic algorithm to assign each student at your school to an A/B/C/D group in a way that facilitates physical distancing in as many classrooms as possible. A course at your school will be classified as "In Compliance" if it meets the following criteria:
+The Student Partition Optimization Tool for Schools uses a genetic algorithm to assign each student at your school to a subgroup in a way that facilitates physical distancing in as many classrooms as possible. This program supports partitioning students into 2 subgroups (an A/B partition) or 4 subgroups (an A/B/C/D partition). For an A/B/C/D partition, a course at your school will be classified as "In Compliance" if it meets the following criteria:
 
 1. No more than 9 students in any one letter group, more explicitly:
 	-No more than 9 A's
@@ -20,6 +20,8 @@ This allows schools some flexibility if they have to rotate students in and out 
 For courses that are not "In Compliance," the algorithm attempts to balance the distribution of students in the A/B/C/D groups, as well as the distribution of students in the (A+B) and (C+D) groups. 
 
 If a school has a different set of requirements than a maximum of 9 students in A/B/C/D groups and 15 students in (A+B) and (C+D) groups, then the fitness function in SPOTS.py can easily be modified to accommodate this. 
+
+A genetic algorithm is an optimization technique whose results improve with additional computation. You may want to let this program work for 8 hours or more to obtain desirable results.
 
 ## Prerequisites
 
