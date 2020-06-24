@@ -3,6 +3,24 @@ State governments and public health agencies have begun recommending that school
 
 Video introduction: https://youtu.be/XJFvY4-FCSc
 
+### What Does This Program Do?
+
+The Student Partition Optimization Tool for Schools uses a genetic algorithm to assign each student at your school to an A/B/C/D group in a way that facilitates physical distancing in as many classrooms as possible. A course at your school will be classified as "In Compliance" if it meets the following criteria:
+
+1. No more than 9 students in any one letter group, more explicitly:
+	-No more than 9 A's
+	-No more than 9 B's
+	-No more than 9 C's
+	-No more than 9 D's
+2. No more than 15 students when combining the A- and B-groups
+3. No more than 15 students when combining the C- and D-groups
+
+This allows schools some flexibility if they have to rotate students in and out of the building. If a school can have no more than 10 people in a classroom (9 students and 1 teacher), then this school can rotate through the A/B/C/D groups one at a time. If a school needs to run each classroom at approximately 50% capacity, they can bring in the A- and B-groups together, and then bring in the C- and D-groups together. 
+
+For courses that are not "In Compliance," the algorithm attempts to balance the distribution of students in the A/B/C/D groups, as well as the distribution of students in the (A+B) and (C+D) groups. 
+
+If a school has a different set of requirements than a maximum of 9 students in A/B/C/D groups and 15 students in (A+B) and (C+D) groups, then the fitness function in SPOTS.py can easily be modified to accommodate this. 
+
 ## Prerequisites
 
 Python 3.8 (https://www.python.org/downloads/)
