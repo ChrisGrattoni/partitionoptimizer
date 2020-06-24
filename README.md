@@ -15,7 +15,7 @@ The Student Partition Optimization Tool for Schools uses a genetic algorithm to 
 2. No more than 15 students when combining the A- and B-groups
 3. No more than 15 students when combining the C- and D-groups
 
-This allows schools some flexibility if they have to rotate students in and out of the building. If a school can have no more than 10 people in a classroom (9 students and 1 teacher), then this school can rotate through the A/B/C/D groups one at a time. If a school needs to run each classroom at approximately 50% capacity, they can bring in the A- and B-groups together, and then bring in the C- and D-groups together. 
+This allows schools some flexibility if they have to rotate students in and out of the building. If a school can have no more than 10 people in a classroom (9 students and 1 teacher), then the school can rotate through the A/B/C/D groups one at a time. If a school needs to run each classroom at approximately 50% capacity, they can bring in the A- and B-groups together, and then bring in the C- and D-groups together. 
 
 For courses that are not "In Compliance," the algorithm attempts to balance the distribution of students in the A/B/C/D groups, as well as the distribution of students in the (A+B) and (C+D) groups. 
 
