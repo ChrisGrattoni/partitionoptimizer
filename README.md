@@ -27,7 +27,7 @@ This program uses a genetic algorithm to optimize a partition of students. In or
      
         LAST, FIRST, MIDDLE, STUDENT_ID, COURSE_NUMBER, COURSE_NAME, COURSE_ID, ROOM_NUMBER, PERIOD
 		
-The three most important columns in this .csv file are STUDENT_ID, ROOM_NUMBER, and PERIOD: these cannot be omitted. The algorithm uniquely identifies individual students using STUDENT_ID, and courses within a school building are uniquely identified using the pair (ROOM_NUMBER, PERIOD). All other columns can be modified or removed (and new columsn can be added) with proper modifications to the program.
+The three most important columns in this .csv file are STUDENT_ID, ROOM_NUMBER, and PERIOD: these cannot be omitted. The algorithm uniquely identifies individual students using STUDENT_ID. Courses within a school building are uniquely identified using the pair (ROOM_NUMBER, PERIOD). All other columns can be modified or removed (and new columsn can be added) with proper modifications to the program.
 
 This .csv file should have an entry for each student course enrollment. For example, if John Smith is taking 7 classes, then John Smith should have 7 rows in the .csv file:
 
