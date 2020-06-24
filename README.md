@@ -3,13 +3,31 @@ State governments and public health agencies have begun recommending that school
 
 Video introduction: https://youtu.be/XJFvY4-FCSc
 
-## Getting Started
+## Prerequisites
+
+Python 3.8 (https://www.python.org/downloads/)
+
+### Getting Started (Example Data)
+
+To try this program with the provided example data, you only need to make a single change in SPOTS.py. At the top of the file, locate the constant named IO_DIRECTORY and indicate the path for example.csv. This will also be where the final reports will be located (student_assignments.csv and course_analysis.csv).
+
+		NUMBER_OF_PARTITIONS = 4 # number of groups to partition students into (only 2 and 4 are implemented)
+		MUTATION_RATE = 0.015 # recommended range: between 0.01 and 0.05, current default = 0.015
+		POPULATION_SIZE = 200 # recommended range: between 100 and 1,000, current default = 200
+		NUMBER_OF_GENERATIONS = 100000 # recommended range: at least 10,000, current default = 100000
+		**IO_DIRECTORY = "C:\\YOUR_DIRECTORY_HERE" # location of input .csv file, for example "C:\\Users\\jsmith\\Desktop\\"**
+		INPUT_CSV_FILENAME = "example.csv" # filename of .csv file
+		TIME_LIMIT = 60*8 # time measured in minutes, current default = 480 min (8 hr)
+
+After you have the program working with example data, you can try data from your own school. 
+
+### Getting Started (Your School's Data)
 
 This program uses a genetic algorithm to optimize a partition of students. In order to evaluate the fitness of a given partition, the algorithm must check the partition against your school's master schedule. You will need to generate a .csv file with the following fields:
      
         LAST, FIRST, MIDDLE, STUDENT_ID, COURSE_NUMBER, COURSE_NAME, COURSE_ID, ROOM_NUMBER, PERIOD
 		
-The three most important columns in this .csv file are STUDENT_ID, ROOM_NUMBER, and PERIOD. The algorithm uniquely identifies individual students using STUDENT_ID, and courses within a school building are uniquely identified using the pair (ROOM_NUMBER, PERIOD).
+The three most important columns in this .csv file are STUDENT_ID, ROOM_NUMBER, and PERIOD: these cannot be omitted. The algorithm uniquely identifies individual students using STUDENT_ID, and courses within a school building are uniquely identified using the pair (ROOM_NUMBER, PERIOD). All other columns can be modified or removed (and new columsn can be added) with proper modifications to the program.
 
 This .csv file should have an entry for each student course enrollment. For example, if John Smith is taking 7 classes, then John Smith should have 7 rows in the .csv file:
 
@@ -22,89 +40,61 @@ This .csv file should have an entry for each student course enrollment. For exam
         John, Smith, William, 000281871, Germ461-01,    AP GERMAN LANG,1943981, ROOM 214,    PERIOD 7
         John, Smith, William, 000281871, Gym400-01,     ADVENTURE EDUCATION,23, ROOM GYM,    PERIOD 8
 
+Once you have generated this .csv file, you will have to edit SPOTS.py to indicate the path for your .csv file (as well as a few other parameters that you can modify if desired). These are all located near the top of SPOTS.py:
 
-        The .csv file should have an entry for each student course enrollment.
-        For example, if John Smith is taking 7 classes, then John Smith should
-        have 7 rows in the .csv file:
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+		**NUMBER_OF_PARTITIONS = 4 # number of groups to partition students into (only 2 and 4 are implemented)**
+		MUTATION_RATE = 0.015 # recommended range: between 0.01 and 0.05, current default = 0.015
+		POPULATION_SIZE = 200 # recommended range: between 100 and 1,000, current default = 200
+		NUMBER_OF_GENERATIONS = 100000 # recommended range: at least 10,000, current default = 100000
+		**IO_DIRECTORY = "C:\\YOUR_DIRECTORY_HERE" # location of input .csv file, for example "C:\\Users\\jsmith\\Desktop\\"**
+		INPUT_CSV_FILENAME = "example.csv" # filename of .csv file
+		TIME_LIMIT = 60*8 # time measured in minutes, current default = 480 min (8 hr)
 
-### Prerequisites
+If your school is implementing an A/B partition, set NUMBER_OF_PARTITIONS = 2. For an A/B/C/D partition, leave the default value of NUMBER_OF_PARTITIONS = 4. You will have to add to this project for a partition size other than 2 or 4. 
 
-What things you need to install the software and how to install them
+### Advanced Users
 
-```
-Give examples
-```
+If you are familiar with genetic algorithms (or would just like to experiment), you can try changing the default values for MUTATION_RATE, POPULATION_SIZE, and NUMBER_OF_GENERATIONS. 
 
-### Installing
+		NUMBER_OF_PARTITIONS = 4 # number of groups to partition students into (only 2 and 4 are implemented)
+		**MUTATION_RATE = 0.015 # recommended range: between 0.01 and 0.05, current default = 0.015**
+		**POPULATION_SIZE = 200 # recommended range: between 100 and 1,000, current default = 200**
+		**NUMBER_OF_GENERATIONS = 100000 # recommended range: at least 10,000, current default = 100000**
+		IO_DIRECTORY = "C:\\YOUR_DIRECTORY_HERE" # location of input .csv file, for example "C:\\Users\\jsmith\\Desktop\\"
+		INPUT_CSV_FILENAME = "example.csv" # filename of .csv file
+		TIME_LIMIT = 60*8 # time measured in minutes, current default = 480 min (8 hr)
 
-A step by step series of examples that tell you how to get a development env running
+It may be possible to modify these parameters to obtain better results. Please email studentpartitionoptimizer@gmail.com if you have parameters you would like to suggest for new default values. 
 
-Say what the step will be
+Finally, a genetic algorithm is only as good as its fitness function. You may choose to adapt Schedule.fitness_score() to your school's needs (or possibly to obtain optimal results in less time). Please email studentpartitionoptimizer@gmail.com if you have a suggested change to Schedule.fitness_score(). 
 
-```
-Give the example
-```
+### Final Output 
 
-And repeat
+As the algorithm runs, it will append results to the file progress_log.txt. You can check this file to watch the progress of the algorithm. Because the first generation in this algorithm assigns student to A/B/C/D groups randomly, early generations will have a low fitness score and a limited number of courses that are rated as "In Compliance." These early generations are similar to the quality of partitions that a human could generate by hand. You should notice a significant jump in the number of "In Compliance" courses for later generations.   
 
-```
-until finished
-```
+This program will also generate two final reports at the end of the algorithm: student_assignments.csv and course_analysis.csv. The student_assignments report is self-explanatory:
 
-End with an example of getting some data out of the system or using it for a little demo
+		Student ID, Last, First, Middle, Letter
+		0291817791, Abel, Niels, Henrik, D
+		0999023822, John, Mikey, Norman, A
 
-## Running the tests
+It is just a list of students and the A/B/C/D groups to which they have been assigned. The course_analysis report is meant to analyze the final results of these particular A/B/C/D assignments. You may consider sorting by "In Compliance" to locate all courses that have been reported as "No." 
 
-Explain how to run the automated tests for this system
+Some of these courses will not be "In Compliance" because they are simply too large. This program defines a course as "In Compliance" if it has no more than 9 students to the A-group, 9 students to the B-group, 9 students to the C-group, and 9 students to the D-group. This is impossible if the course has 40 students in it. 
 
-### Break down into end to end tests
+Other courses will not be "In Compliance" because they have an imbalance in the size of the A/B/C/D groups that is too large. You can identify these courses by looking a large value for "Max Deviation" (as well as "In Compliance" = "No"). Sometimes, it will be possible to get some of these course to be "In Compliance" by running the algorithm longer (or running on a few machines and selecting the best results). However, schedule optimization is well known to be a difficult problem, and it is not realistic to expect 100% of courses achieving a rating of "In Compliance." 
 
-Explain what these tests test and why
+## Author
 
-```
-Give an example
-```
+* **Christopher Grattoni** - *Initial work* - [NFLtheorem](https://github.com/NFLtheorem/partitionoptimizer)
 
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* [Dropwizard](http://www.dropwizard.io/1.0.2/docs/) - The web framework used
-* [Maven](https://maven.apache.org/) - Dependency Management
-* [ROME](https://rometools.github.io/rome/) - Used to generate RSS Feeds
-
-## Contributing
-
-Please read [CONTRIBUTING.md](https://gist.github.com/PurpleBooth/b24679402957c63ec426) for details on our code of conduct, and the process for submitting pull requests to us.
-
-## Versioning
-
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags). 
-
-## Authors
-
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
-
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/NFLtheorem/partitionoptimizer/graphs/contributors) who participated in this project.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the GNU Affero General Public License v3.0 - see the [LICENSE.md](LICENSE.md) file for details
 
 ## Acknowledgments
 
-* Hat tip to anyone whose code was used
-* Inspiration
-* etc
+* Thanks, brother.
 
