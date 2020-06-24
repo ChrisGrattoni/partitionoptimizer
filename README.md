@@ -21,7 +21,7 @@ For courses that are not "In Compliance," the algorithm attempts to balance the 
 
 If a school has a different set of requirements than a maximum of 9 students in A/B/C/D groups and 15 students in (A+B) and (C+D) groups, then the fitness function in SPOTS.py can easily be modified to accommodate this. 
 
-A genetic algorithm is an optimization technique whose results improve with additional computation. You may want to let this program work for 8 hours or more to obtain desirable results.
+**Important:** A genetic algorithm is an optimization technique whose results improve with additional computation. You may want to let this program work for 8 hours or more to obtain desirable results.
 
 ## Prerequisites
 
