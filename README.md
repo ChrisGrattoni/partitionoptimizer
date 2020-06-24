@@ -15,7 +15,7 @@ To try this program with the provided example data, you only need to make a sing
 		MUTATION_RATE = 0.015 # recommended range: between 0.01 and 0.05, current default = 0.015
 		POPULATION_SIZE = 200 # recommended range: between 100 and 1,000, current default = 200
 		NUMBER_OF_GENERATIONS = 100000 # recommended range: at least 10,000, current default = 100000
-		**IO_DIRECTORY = "C:\\YOUR_DIRECTORY_HERE" # location of input .csv file, for example "C:\\Users\\jsmith\\Desktop\\"**
+		IO_DIRECTORY = "C:\\YOUR_DIRECTORY_HERE" # location of input .csv file, for example "C:\\Users\\jsmith\\Desktop\\"
 		INPUT_CSV_FILENAME = "example.csv" # filename of .csv file
 		TIME_LIMIT = 60*8 # time measured in minutes, current default = 480 min (8 hr)
 
@@ -42,11 +42,11 @@ This .csv file should have an entry for each student course enrollment. For exam
 
 Once you have generated this .csv file, you will have to edit SPOTS.py to indicate the path for your .csv file (as well as a few other parameters that you can modify if desired). These are all located near the top of SPOTS.py:
 
-		**NUMBER_OF_PARTITIONS = 4 # number of groups to partition students into (only 2 and 4 are implemented)**
+		NUMBER_OF_PARTITIONS = 4 # number of groups to partition students into (only 2 and 4 are implemented)
 		MUTATION_RATE = 0.015 # recommended range: between 0.01 and 0.05, current default = 0.015
 		POPULATION_SIZE = 200 # recommended range: between 100 and 1,000, current default = 200
 		NUMBER_OF_GENERATIONS = 100000 # recommended range: at least 10,000, current default = 100000
-		**IO_DIRECTORY = "C:\\YOUR_DIRECTORY_HERE" # location of input .csv file, for example "C:\\Users\\jsmith\\Desktop\\"**
+		IO_DIRECTORY = "C:\\YOUR_DIRECTORY_HERE" # location of input .csv file, for example "C:\\Users\\jsmith\\Desktop\\"
 		INPUT_CSV_FILENAME = "example.csv" # filename of .csv file
 		TIME_LIMIT = 60*8 # time measured in minutes, current default = 480 min (8 hr)
 
@@ -57,9 +57,9 @@ If your school is implementing an A/B partition, set NUMBER_OF_PARTITIONS = 2. F
 If you are familiar with genetic algorithms (or would just like to experiment), you can try changing the default values for MUTATION_RATE, POPULATION_SIZE, and NUMBER_OF_GENERATIONS. 
 
 		NUMBER_OF_PARTITIONS = 4 # number of groups to partition students into (only 2 and 4 are implemented)
-		**MUTATION_RATE = 0.015 # recommended range: between 0.01 and 0.05, current default = 0.015**
-		**POPULATION_SIZE = 200 # recommended range: between 100 and 1,000, current default = 200**
-		**NUMBER_OF_GENERATIONS = 100000 # recommended range: at least 10,000, current default = 100000**
+		MUTATION_RATE = 0.015 # recommended range: between 0.01 and 0.05, current default = 0.015
+		POPULATION_SIZE = 200 # recommended range: between 100 and 1,000, current default = 200
+		NUMBER_OF_GENERATIONS = 100000 # recommended range: at least 10,000, current default = 100000
 		IO_DIRECTORY = "C:\\YOUR_DIRECTORY_HERE" # location of input .csv file, for example "C:\\Users\\jsmith\\Desktop\\"
 		INPUT_CSV_FILENAME = "example.csv" # filename of .csv file
 		TIME_LIMIT = 60*8 # time measured in minutes, current default = 480 min (8 hr)
