@@ -1473,7 +1473,7 @@ def run_loop(path, number_of_partitions, pop_size, rate_of_mutation, max_gen, ma
         generation_number += 1
         
         population.sorted_scored_population = previous_population
-        current_generation = GeneticAlgorithm(population, generation_number)
+        current_generation = GeneticAlgorithm(population, generation_number, rate_of_mutation)
         current_generation.generate_next_generation()
         previous_population = current_generation.next_generation
         
