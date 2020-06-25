@@ -1137,7 +1137,21 @@ class GeneticAlgorithm(Population):
         """
         Parameters
         ----------
-        TO DO 
+        population_obj : Population object
+            inherited from the Population class
+        generation_number : int
+            the current generation the algorithm is on
+        mutation_rate : float
+            the rate of mutation for each child, with
+            a default value of 0.01 (1%)
+        current_generation: 
+            a deep copy of the sorted_scored_population attribute from population_obj,
+            this is a list in the form [(score1, population1), (score2, population2), ...]
+        next generation:
+            the next generation of individuals as determined by the algorithm, 
+            this is a list in the form [(score1, population1), (score2, population2), ...]
+        number_of_partitions: int
+            inherited from the Population class
         """
         self.population_obj = population_obj
         self.generation_number = generation_number
