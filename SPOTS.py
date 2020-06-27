@@ -1,7 +1,7 @@
 """
 Name: Student Partition Optimization Tool for Schools (SPOTS)
 
-Version: 1.0.0a1
+Version: 1.0.0a2
 
 Summary: Optimize a student partition (usually assigning each student to A/B/C/D) to facilitate physical distancing in classrooms
 
@@ -34,13 +34,33 @@ import warnings # used in run_loop() to remind users to close output reports
                 # before running the algorithm a second time 
 
 # parameters for main algorithm
-NUMBER_OF_PARTITIONS = 4 # number of groups to partition students into (only 2 and 4 are implemented)
-MUTATION_RATE = 0.015 # recommended range: between 0.01 and 0.05, current default = 0.015
-POPULATION_SIZE = 200 # recommended range: between 100 and 1,000, current default = 200
-NUMBER_OF_GENERATIONS = 100000 # recommended range: at least 10,000, current default = 100000
-IO_DIRECTORY = "C:\\YOUR_DIRECTORY_HERE" # location of input .csv file, for example "C:\\Users\\jsmith\\Desktop\\"
-INPUT_CSV_FILENAME = "example.csv" # filename of .csv file
-TIME_LIMIT = 60*8 # time measured in minutes, current default = 480 min (8 hr)
+
+# number of groups to partition students into (only 2 and 4 are implemented)
+NUMBER_OF_PARTITIONS = 4
+
+# max size of a partition when dividing students into two subgroups (default = 15) 
+HALF_CLASS_MAXIMUM = 15 
+
+# max size of a partition when dividing students into four subgroups (default = 9)
+QUARTER_CLASS_MAXIMUM = 9
+
+# recommended range: between 0.01 and 0.05, (default = 0.015)
+MUTATION_RATE = 0.015 
+
+# recommended range: between 100 and 1,000, (default = 200)
+POPULATION_SIZE = 200 
+
+# recommended range: at least 10,000 (default = 100000)
+NUMBER_OF_GENERATIONS = 100000 
+
+# location of input .csv file, (example: "C:\\Users\\jsmith\\Desktop\\")
+IO_DIRECTORY = "C:\\Users\\jsmith\\Desktop\\" 
+
+# filename of .csv file (default = "example.csv)
+INPUT_CSV_FILENAME = "example.csv" 
+
+# time measured in minutes (default = 480 min or 8 hr)
+TIME_LIMIT = 60*8 
 
 # REQUEST FOR USERS
 #
@@ -159,6 +179,14 @@ class Schedule:
     number_of_partitions : int
         the number of partitions students are to be separated into 
         (default value is 4)
+    half_class_maximum : int
+        the target maximum size of a partition when dividing students 
+        into two subgroups of roughtly equal size
+        (default value is 15)
+    quarter_class_maximum : int
+        the target maximum size of a partition when dividing students
+        into four subgroups of roughly equal size
+        (default value is 9)
     student_list : list
         a list of tuples in the form (student_object, schedule_list) 
         student_object: an object representing a single student
@@ -193,7 +221,7 @@ class Schedule:
         is taking place
     """
     
-    def __init__(self, number_of_partitions = 4):
+    def __init__(self, number_of_partitions = 4, half_class_maximum = 15, quarter_class_maximum = 9):
         """
         The constructor for the Schedule class
         
@@ -202,8 +230,18 @@ class Schedule:
         number_of_partitions : int
             the number of partitions students are to be separated into 
             (default value is 4)
+        half_class_maximum : int
+            the target maximum size of a partition when dividing students 
+            into two subgroups of roughtly equal size
+            (default value is 15)
+        quarter_class_maximum : int
+            the target maximum size of a partition when dividing students
+            into four subgroups of roughly equal size
+            (default value is 9)
         """
         self.number_of_partitions = number_of_partitions
+        self.half_class_maximum = half_class_maximum
+        self.quarter_class_maximum = quarter_class_maximum
         
         # changed student_list to a list so users using old versions of Python (< 3.7) 
         # do not run into issues with iterating over a dictionary in a deterministic order
@@ -479,7 +517,8 @@ class Schedule:
         This example says that the class in Rm 254 during 5th hour has
         24 students, with 6 A's, 6 B's, 6 C's, 6 D's, each comprising 25% of the
         total course roster. This course is in compliance with physical distancing 
-        requirements since each A/B/C/D subgroup is 9 or fewer students.
+        requirements since each A/B/C/D subgroup is self.quarter_class_maximum (9)
+        or fewer students.
         
         Example data #2:
         201,6,[E10101], 32, 10, 6, 8, 8, 0.3125, 0.1875, 0.25, 0.25, 0.0625, No
@@ -490,7 +529,7 @@ class Schedule:
         C's/D's are each 25% of the class. The max deviation is 0.0625, 
         which is found by 0.3125 - 0.25 = 0.0625. This course is NOT in 
         compliance with physical distancing requirements since the A-group
-        exceeds 9 students. 
+        exceeds self.quarter_class_maximum (9) students. 
                 
         Parameters
         ----------
@@ -587,7 +626,7 @@ class Schedule:
                         # for an A/B partition, we say that a course is
                         # "In Compliance" if there are no more than 15 
                         # students in either group
-                        if counts[0] <= 15 and counts[1] <= 15:
+                        if counts[0] <= self.half_class_maximum and counts[1] <= self.half_class_maximum:
                             line += "Yes" 
                         else:
                             line += "No"
@@ -599,13 +638,17 @@ class Schedule:
                         d_count = counts[3]
                         
                         # for an A/B/C/D partition, we say that a course is
-                        # "In Compliance" if there are no more than 9 students
-                        # in any of the four groups:
-                        check_individually = (a_count <= 9 and b_count <= 9 and c_count <= 9 and d_count <= 9)
+                        # "In Compliance" if there are no more than 
+                        # self.quarter_class_maximum (9) students in any
+                        # of the four groups:
+                        
+                        qcm = self.quarter_class_maximum 
+                        check_individually = (a_count <= qcm and b_count <= qcm and c_count <= qcm and d_count <= qcm)
                         
                         # we also require that the (A+B) and (C+D) combined 
-                        # groups are no more than 15 students:                        
-                        check_pairs = (a_count + b_count <= 15 and c_count + d_count <= 15)
+                        # groups are no more than self.half_class_maximum students
+                        # (default value 15):                        
+                        check_pairs = (a_count + b_count <= self.half_class_maximum and c_count + d_count <= self.half_class_maximum)
                         
                         # if the course passes both tests, it is "In Compliance"
                         if check_individually and check_pairs:
@@ -706,31 +749,37 @@ class Schedule:
                 percent_difference = abs(a_percent - b_percent)
 
                 # we are classifying a course as "In Compliance"
-                # if it has no more than 15 A's and 15 B's:
-                if a_count <= 15 and b_count <= 15:
+                # if it has no more than self.half_class_maximum
+                # A's and self.half_class_maximum B's (default 
+                # value is 15):
+                if a_count <= self.half_class_maximum and b_count <= self.half_class_maximum:
                     # increment the raw "In Compliance" score:
                     good_score += 1 
                     # increment the weighted_fitness_score:
                     weighted_fitness_score += 1/total 
                 # otherwise, apply a penalty based on how far the course
                 # deviates from a 50/50 split betwen A's and B':
-                elif a_count <= 15 and b_count > 15:
+                elif a_count <= self.half_class_maximum and b_count > self.half_class_maximum:
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
-                elif a_count > 15 and b_count <= 15:
+                elif a_count > self.half_class_maximum and b_count <= self.half_class_maximum:
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
-                # if we make it here, a_count and b_count are 
-                # both above 15, so no partition can ever get 
-                # a_count <= 15 and b_count <= 15, instead we try
-                # to make sure that the relative ratio between A's 
-                # and B's is better than a 55/45 split 
-                elif a_percent > 0.55:
+                # If we make it here, a_count and b_count are 
+                # both above self.half_class_maximum (15), so 
+                # no partition can ever get both
+                # a_count <= self.half_class_maximum
+                #   and 
+                # b_count <= self.half_class_maximum 
+                # at the same time. 
+                # Instead we try to make sure that the relative
+                # ratio between A's and B's is better than a 55/45 split:
+                elif a_percent > 0.55: # this tolerance can be modified 
                     # penalize if the section deviates from a 
                     # 55/45 split between A/B
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
-                elif b_percent > 0.55:
+                elif b_percent > 0.55: # this tolerance can be modified
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
                 else:
@@ -771,17 +820,21 @@ class Schedule:
                 c_percent = c_count/total
                 d_percent = d_count/total
                 
-                # check if there are no more than 9 students of any letter:
-                check_individually = (a_count <= 9 and b_count <= 9 and c_count <= 9 and d_count <= 9)
+                # check if there are no more than self.quarter_class_maximum
+                # (9) students of any letter:
+                qcm = self.quarter_class_maximum
+                check_individually = (a_count <= qcm and b_count <= qcm and c_count <= qcm and d_count <= qcm)
                 
                 # check if the (A+B) count and (C+D) count are each less
-                # than 15 students:
-                check_pairs = (a_count + b_count <= 15 and c_count + d_count <= 15)
+                # than self.half_class_maximum students (default value is 15):
+                hcm = self.half_class_maximum
+                check_pairs = (a_count + b_count <= hcm and c_count + d_count <= hcm)
                 
                 # we classify a course as "In Compliance" if there
-                # are no more than 9 students of any letter, and if
-                # the (A+B) count and the (C+D) are each less than or
-                # equal to 15
+                # are no more than self.quarter_class_maximum (9) 
+                # students of any letter, and if the (A+B) count 
+                # and the (C+D) are each less than or equal to 
+                # self.half_class_maximum (15)
                 if check_individually and check_pairs:
                     # increment the raw "In Compliance" score:
                     good_score += 1
@@ -1374,7 +1427,7 @@ class GeneticAlgorithm(Population):
         
         return self.population_obj.sorted_scored_population
 
-def run_loop(path, number_of_partitions, pop_size, rate_of_mutation, max_gen, max_time):
+def run_loop(path, number_of_partitions, half_class_maximum, quarter_class_maximum, pop_size, rate_of_mutation, max_gen, max_time):
     """
     Repeat the Genetic Algorithm based on a specified number of generations (or time limit)
                 
@@ -1414,7 +1467,7 @@ def run_loop(path, number_of_partitions, pop_size, rate_of_mutation, max_gen, ma
     generation_number = 1
     
     # instantiate the Schedule object
-    load_schedule = Schedule(number_of_partitions)
+    load_schedule = Schedule(number_of_partitions, half_class_maximum, quarter_class_maximum)
     
     # load school data into the Schedule object
     load_schedule.students_from_csv(path)
@@ -1523,7 +1576,7 @@ def run_loop(path, number_of_partitions, pop_size, rate_of_mutation, max_gen, ma
 
 # a possible target for using the multiprocessing module:     
 def main():
-    run_loop(IO_DIRECTORY + INPUT_CSV_FILENAME, NUMBER_OF_PARTITIONS, POPULATION_SIZE, MUTATION_RATE, NUMBER_OF_GENERATIONS, TIME_LIMIT)
+    run_loop(IO_DIRECTORY + INPUT_CSV_FILENAME, NUMBER_OF_PARTITIONS, HALF_CLASS_MAXIMUM, QUARTER_CLASS_MAXIMUM, POPULATION_SIZE, MUTATION_RATE, NUMBER_OF_GENERATIONS, TIME_LIMIT)
 
 if __name__ == "__main__":
     main()
