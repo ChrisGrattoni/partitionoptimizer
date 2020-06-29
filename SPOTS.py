@@ -845,10 +845,7 @@ class Schedule:
                 # where penalties are applied based on how far the course deviates
                 # from an even distribution of A/B/C/D:
                 else: 
-                    # subtract from weighted_fitness_score if a_percent + b_percent
-                    # is over 55% of the roster:
-                    
-                    # default value of pairwise_multiplier = 0.5
+                    # pairwise_multiplier: 
                     #
                     # change this depending on what you want to emphasize in the search:
                     #
@@ -856,50 +853,76 @@ class Schedule:
                     # (C+D) groups (work towards a 50/50 split between these groups)
                     # 
                     # decrease to emphasize "In Compliance" courses
+                    #
+                    # default value of pairwise_multiplier = 0.5
+                    #
                     pairwise_multiplier = 0.5
                     
-                    # default value = 0.25
+                    # individual_multiplier
                     #
                     # change this depending on what you want to emphasize in the search:
                     #
                     # increase to emphasize an even distribution between the A/B/C/D groups
                     #
                     # decrease to emphasize "In Compliance" courses                    
+                    # 
+                    # default of individual_multiplier = 0.25
+                    #
                     individual_multiplier = 0.25
-                   
-                    if a_percent + b_percent > 0.55:
-                        # see note above about pairwise_multiplier
-                        weighted_fitness_score -= pairwise_multiplier*(a_percent + b_percent - 0.5)
-                        penalty_count += 1
-                    # subtract from weighted_fitness_score if c_percent + d_percent
-                    # is over 55% of the roster:
-                    if c_percent + d_percent > 0.55:
-                        # see note above about pairwise_multiplier
-                        weighted_fitness_score -= pairwise_multiplier*(c_percent + d_percent - 0.5)
-                        penalty_count += 1
-                    # subtract from weighted_fitness_score if a_percent exceeds 30% of the roster:
-                    if a_percent > 0.3:
-                        # see note above about individual_multiplier
-                        weighted_fitness_score -= individual_multiplier*(a_percent - 0.25)
-                        penalty_count += 1
-                    # subtract from weighted_fitness_score if b_percent exceeds 30% of the roster:
-                    if b_percent > 0.3:
-                        # see note above about individual_multiplier
-                        weighted_fitness_score -= individual_multiplier*(b_percent - 0.25)
-                        penalty_count += 1
-                    # subtract from weighted_fitness_score if c_percent exceeds 30% of the roster:
-                    if c_percent > 0.3:
-                        # see note above about individual_multiplier
-                        weighted_fitness_score -= individual_multiplier*(c_percent - 0.25)
-                        penalty_count += 1
-                    # subtract from weighted_fitness_score if d_percent exceeds 30% of the roster:
-                    if d_percent > 0.3:
-                        # see note above about individual_multiplier
-                        weighted_fitness_score -= individual_multiplier*(d_percent - 0.25)
-                        penalty_count += 1
-                    # an "Out of Compliance" section for which no penalty was applied:                    
-                    if (a_percent <= 0.3 and b_percent <= 0.3 and c_percent <= 0.3 and d_percent <= 0.3) and (a_percent + b_percent <= 0.55 and (c_percent + d_percent) <= 0.55):
-                        other_score += 1
+
+                    # a list with the ratio of (A + B) to (C + D)
+                    pairwise_list = [a_percent + b_percent, c_percent + d_percent]
+
+                    # our tolerance for applying a penalty based on the 
+                    # relative size of the (A + B) or (C + D) groups, 
+                    # which is usually going to be set to 55%
+                    # 
+                    # for a small class, 55% might not be feasible, so we set
+                    # it to (total/2 + 1)/total instead
+                    #
+                    pairwise_tolerance = max([0.55, (total/2+1)/total])
+                    
+                    # apply a penalty if either element in pairwise_list
+                    # exceeds the above tolerance:
+                    for relative_frequency in pairwise_list:
+                        if relative_frequency > pairwise_tolerance:
+                            weighted_fitness_score -= pairwise_multiplier*(relative_frequency - 0.5)
+                            penalty_count += 1
+                    
+                    # a list with the ratio of A/B/C/D to the total class size
+                    individual_list = [a_percent, b_percent, c_percent, d_percent]
+
+                    # our tolerance for applying a penalty based on the 
+                    # relative size of any individual A/B/C/D group
+                    # which is usually going to be set to 30%
+                    # 
+                    # for a small class, 30% might not be feasible, so we set
+                    # it to (total/4 + 1)/total instead
+                    #
+                    individual_tolerance = max([0.3, (total/4+1)/total])
+
+                    # apply a penalty if any element in individual_list
+                    # exceeds the above tolerance:
+                    for relative_frequency in individual_list:
+                        if relative_frequency > individual_tolerance:
+                            weighted_fitness_score -= individual_multiplier*(relative_frequency - 0.25)
+                            penalty_count += 1
+                  
+                    # check all the above conditions together:
+                    all_individually = all([percent < individual_tolerance for percent in individual_list])
+                    all_pairwise = all([percent < pairwise_tolerance for percent in pairwise_list])
+                    
+                    if all_individually and all_pairwise:
+                        
+                        if total > 30:
+                            # this is a course that is too big to ever be 
+                            # "In Compliance" above, but we have at least 
+                            # partitioned it evenly, so we count it as good:
+                            weighted_fitness_score += 1/total
+                            good_score += 1
+                        else:
+                            # this should catch any cases that have been missed above 
+                            other_score += 1
         
         else: 
             print("In order to choose something other than an AB or ABCD partition, you must add your own fitness function")    
