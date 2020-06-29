@@ -755,8 +755,11 @@ class Schedule:
                 if a_count <= self.half_class_maximum and b_count <= self.half_class_maximum:
                     # increment the raw "In Compliance" score:
                     good_score += 1 
-                    # increment the weighted_fitness_score:
-                    weighted_fitness_score += 1/total 
+                    # increment the weighted_fitness_score
+                    # note that if all classes were "good" then 
+                    # the fitness score would equal 100 since
+                    # number_of_courses*(100/number_of_courses) = 100
+                    weighted_fitness_score += 100/number_of_courses 
                 # otherwise, apply a penalty based on how far the course
                 # deviates from a 50/50 split betwen A's and B':
                 elif a_count <= self.half_class_maximum and b_count > self.half_class_maximum:
@@ -839,7 +842,7 @@ class Schedule:
                     # increment the raw "In Compliance" score:
                     good_score += 1
                     # increment the weighted_fitness_score:
-                    weighted_fitness_score += 1/total
+                    weighted_fitness_score += 100/number_of_courses
 
                 # otherwise, start subtracting from the weighted_fitness_score, 
                 # where penalties are applied based on how far the course deviates
@@ -918,7 +921,7 @@ class Schedule:
                             # this is a course that is too big to ever be 
                             # "In Compliance" above, but we have at least 
                             # partitioned it evenly, so we count it as good:
-                            weighted_fitness_score += 1/total
+                            weighted_fitness_score += 100/number_of_courses
                             good_score += 1
                         else:
                             # this should catch any cases that have been missed above 
