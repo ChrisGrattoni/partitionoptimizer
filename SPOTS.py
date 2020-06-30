@@ -353,9 +353,9 @@ class Schedule:
                     # then instantiate a Student object and assign 
                     # it to current_student:
                     current_student = Student(student_id)
-                    current_student.last_name = row[0]
-                    current_student.middle_name = row[2]
-                    current_student.first_name = row[1]
+                    current_student.last_name = last_name
+                    current_student.middle_name = middle_name
+                    current_student.first_name = first_name
 
                     # next, add to temp_student_dict using:
                     # key: student_id 
@@ -817,11 +817,6 @@ class Schedule:
                 # the total number of students on the roster:
                 total = len(roster)
                 
-                # relative percentage of A's/B's/C's/D's:
-                a_percent = a_count/total
-                b_percent = b_count/total
-                c_percent = c_count/total
-                d_percent = d_count/total
                 
                 # check if there are no more than self.quarter_class_maximum
                 # (9) students of any letter:
@@ -873,61 +868,50 @@ class Schedule:
                     #
                     individual_multiplier = 0.25
 
-                    # a list with the ratio of (A + B) to (C + D)
-                    pairwise_list = [a_percent + b_percent, c_percent + d_percent]
 
-                    # our tolerance for applying a penalty based on the 
-                    # relative size of the (A + B) or (C + D) groups, 
-                    # which is usually going to be set to 55%
-                    # 
-                    # for a small class, 55% might not be feasible, so we set
-                    # it to (total/2 + 1)/total instead
-                    #
-                    pairwise_tolerance = max([0.55, (total/2+1)/total])
-                    
-                    # apply a penalty if either element in pairwise_list
-                    # exceeds the above tolerance:
-                    for relative_frequency in pairwise_list:
-                        if relative_frequency > pairwise_tolerance:
-                            weighted_fitness_score -= pairwise_multiplier*(relative_frequency - 0.5)
-                            penalty_count += 1
-                    
-                    # a list with the ratio of A/B/C/D to the total class size
-                    individual_list = [a_percent, b_percent, c_percent, d_percent]
+                    # relative percentage of A's/B's/C's/D's:
+                    a_percent = a_count/total
+                    b_percent = b_count/total
+                    c_percent = c_count/total
+                    d_percent = d_count/total
 
-                    # our tolerance for applying a penalty based on the 
-                    # relative size of any individual A/B/C/D group
-                    # which is usually going to be set to 30%
-                    # 
-                    # for a small class, 30% might not be feasible, so we set
-                    # it to (total/4 + 1)/total instead
-                    #
-                    individual_tolerance = max([0.3, (total/4+1)/total])
 
-                    # apply a penalty if any element in individual_list
-                    # exceeds the above tolerance:
-                    for relative_frequency in individual_list:
-                        if relative_frequency > individual_tolerance:
-                            weighted_fitness_score -= individual_multiplier*(relative_frequency - 0.25)
-                            penalty_count += 1
-                  
-                    # check all the above conditions together:
-                    all_individually = all([percent < individual_tolerance for percent in individual_list])
-                    all_pairwise = all([percent < pairwise_tolerance for percent in pairwise_list])
-                    
-                    if all_individually and all_pairwise:
-                        
-                        if total > 30:
-                            # this is a course that is too big to ever be 
-                            # "In Compliance" above, but we have at least 
-                            # partitioned it evenly, so we count it as good:
-                            weighted_fitness_score += 100/number_of_courses
-                            good_score += 1
-                        else:
-                            # this should catch any cases that have been missed above 
-                            other_score += 1
-        
-        else: 
+                    if a_percent + b_percent > 0.55:
+                        # see note above about pairwise_multiplier
+                        weighted_fitness_score -= pairwise_multiplier*(a_percent + b_percent - 0.5)
+                        penalty_count += 1
+                    # subtract from weighted_fitness_score if c_percent + d_percent
+                    # is over 55% of the roster:
+                    elif c_percent + d_percent > 0.55:
+                        # see note above about pairwise_multiplier
+                        weighted_fitness_score -= pairwise_multiplier*(c_percent + d_percent - 0.5)
+                        penalty_count += 1
+
+                    # subtract from weighted_fitness_score if a_percent exceeds 30% of the roster:
+                    if a_percent > 0.3:
+                        # see note above about individual_multiplier
+                        weighted_fitness_score -= individual_multiplier*(a_percent - 0.25)
+                        penalty_count += 1
+                    # subtract from weighted_fitness_score if b_percent exceeds 30% of the roster:
+                    if b_percent > 0.3:
+                        # see note above about individual_multiplier
+                        weighted_fitness_score -= individual_multiplier*(b_percent - 0.25)
+                        penalty_count += 1
+                    # subtract from weighted_fitness_score if c_percent exceeds 30% of the roster:
+                    if c_percent > 0.3:
+                        # see note above about individual_multiplier
+                        weighted_fitness_score -= individual_multiplier*(c_percent - 0.25)
+                        penalty_count += 1
+                    # subtract from weighted_fitness_score if d_percent exceeds 30% of the roster:
+                    if d_percent > 0.3:
+                        # see note above about individual_multiplier
+                        weighted_fitness_score -= individual_multiplier*(d_percent - 0.25)
+                        penalty_count += 1
+                   
+                    # an "Out of Compliance" section for which no penalty was applied:                    
+                    if (a_percent <= 0.3 and b_percent <= 0.3 and c_percent <= 0.3 and d_percent <= 0.3) and (a_percent + b_percent <= 0.55 and (c_percent + d_percent) <= 0.55):
+                        other_score += 1        
+        else:
             print("In order to choose something other than an AB or ABCD partition, you must add your own fitness function")    
             raise NotImplementedError
         
@@ -1168,6 +1152,8 @@ class Population(IndividualPartition):
         ----------
         None
         """
+        self.sorted_scored_population = []
+
         for individual in self.population:
             self.individual_partition_obj.partition = individual
             fitness = self.individual_partition_obj.return_fitness()
@@ -1194,7 +1180,7 @@ class GeneticAlgorithm(Population):
     current_generation: 
         a deep copy of the sorted_scored_population attribute from population_obj,
         this is a list in the form [(score1, population1), (score2, population2), ...]
-    next generation:
+    next_generation:
         the next generation of individuals as determined by the algorithm, 
         this is a list in the form [(score1, population1), (score2, population2), ...]
     number_of_partitions: int
@@ -1444,7 +1430,6 @@ class GeneticAlgorithm(Population):
         # next_generation_individuals has not yet been scored, so we
         # use the Population class to assess the fitness of the next_generation:
         self.population_obj.population = next_generation_individuals
-        self.population_obj.sorted_scored_population = []
         scored_next_generation = self.population_obj.population_fitness()
         
         # after scoring, assign this to self.next_generation
@@ -1522,7 +1507,8 @@ def run_loop(path, number_of_partitions, half_class_maximum, quarter_class_maxim
     timer_total += end_timer - start_timer
 
     # Uncomment below to track how long this took:
-    #print("Benchmark result = " + str(end - start))
+    # (This includes the initial CSV load, so it will be a bit longer than the general case)
+    print("Benchmark result = " + str(end_timer - start_timer))
 
     # Concatenate a string to report progress:
     progress_string = "Generation = "
@@ -1558,6 +1544,10 @@ def run_loop(path, number_of_partitions, half_class_maximum, quarter_class_maxim
         
         end_timer = time.perf_counter()
         timer_total += end_timer - start_timer
+
+        # Uncomment below to track how long this took:
+        # (This is the general case WITHOUT initial CSV load)
+        print("Benchmark result = " + str(end_timer - start_timer))
         
         progress_string = "Generation = "
         progress_string += str(generation_number)
@@ -1590,6 +1580,10 @@ def run_loop(path, number_of_partitions, half_class_maximum, quarter_class_maxim
         elif generation_number >= max_gen:
             print("Generation limit reached: Ended after generation #" + str(generation_number))
     
+
+    # Uncomment below to track how long this took:
+    print("Total runtime = " + str(timer_total))
+
     # at the end of the algorithm, write a student assignment report
     # and a course-by-course analysis report
     final_partition = previous_population[0][1]
