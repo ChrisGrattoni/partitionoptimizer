@@ -38,6 +38,14 @@ import warnings # used in run_loop() to remind users to close output reports
 # number of groups to partition students into (only 2 and 4 are implemented)
 NUMBER_OF_PARTITIONS = 4
 
+
+# list of possible student letters (or labels)
+if NUMBER_OF_PARTITIONS == 2:
+    STUDENT_LETTER_LIST = ["A", "B"]
+elif NUMBER_OF_PARTITIONS == 4:
+    STUDENT_LETTER_LIST = ["A", "B", "C", "D"]
+
+
 # max size of a partition when dividing students into two subgroups (default = 15) 
 HALF_CLASS_MAXIMUM = 15 
 
@@ -1028,17 +1036,14 @@ class IndividualPartition(Schedule):
         
         """        
         
-        # use the number_of_partitions to determine which letters to use
-        letter_list = [chr(i + 65) for i in range(0, self.number_of_partitions)]
-        
         student_partition_list = []
     
         # use number_of_students to determine how many letters are needed
         number_of_students = len(self.schedule_obj.student_list)
-        
+
         # populate the list, ex: ["A", "A", "C", "B", "D", "A", ...] 
         for _ in range(number_of_students):
-            letter = random.choice(letter_list)
+            letter = random.choice(STUDENT_LETTER_LIST)
             student_partition_list.append(letter)        
         
         # store the list in the self.partition attribute
@@ -1236,11 +1241,7 @@ class GeneticAlgorithm(Population):
         individual_partition : list
             a list in the form ["A", "A", "B", "D", "A", "C", "B", "C", ...]
         """        
-        
-        # the list of possible letters based on the value of self.number_of_partitions 
-        # this will usually be ["A","B","C","D"]
-        letter_list = [chr(i + 65) for i in range(0, self.number_of_partitions)]
-        
+                
         # the mutated partition
         new_partition = []
         
@@ -1253,11 +1254,11 @@ class GeneticAlgorithm(Population):
             
             # if we win our "dice roll", then mutate:
             if check_mutate < self.mutation_rate:
-                # subtract the letter from letter_list
+                # subtract the letter from STUDENT_LETTER_LIST
                 # for example, if letter = "A" and 
-                # letter_list = ["A","B","C","D"], then
+                # STUDENT_LETTER_LIST = ["A","B","C","D"], then
                 # intersected_list = ["B","C","D"]
-                intersected_list = [element for element in letter_list if element != letter]
+                intersected_list = [element for element in STUDENT_LETTER_LIST if element != letter]
                 
                 # mutated letter is a random selection from
                 # intersected_list:
