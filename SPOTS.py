@@ -62,10 +62,17 @@ POPULATION_SIZE = 200
 NUMBER_OF_GENERATIONS = 100000 
 
 # location of input .csv file, (example: "C:\\Users\\jsmith\\Desktop\\")
-IO_DIRECTORY = "C:\\Users\\jsmith\\Desktop\\" 
+IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\" 
 
-# filename of .csv file (default = "example.csv)
+# filename of .csv file with student schedule data (default = "example.csv) 
 INPUT_CSV_FILENAME = "example.csv" 
+
+# filename of .csv file with forced student subgrouping data (default = "example_subgroups.csv) 
+FORCED_SUBGROUP_CSV_FILENAME = "example_subgroups.csv" 
+
+# filename of .csv file with preferred student subgrouping data (default = None) 
+PREFERRED_SUBGROUP_CSV_FILENAME = None
+
 
 # time measured in minutes (default = 480 min or 8 hr)
 TIME_LIMIT = 60*8 
@@ -202,11 +209,25 @@ class Schedule:
         key: a course object
         value: a course roster (a list of student objects enrolled 
         in the course)
+    forced_subgroups_list : list
+        a list of tuples, where each tuple is a subgroup of students
+        that must be assigned to the same letter groups, for example
+        here is a list where students 1/2/3 must be assigned to the 
+        same letter, students 3/4 must be assigned to the same letter,
+        and student6 is in a subgroup by him/herself:
+        [(student1, student2, student3), (student4, student5), (student6)]
+    preferred_subgroups_list : list
+        a list in the same form as forced_subgroups_list, but subgroups
+        are not forced by the algorithm (instead, they will be encouraged
+        by the fitness function)
             
     Methods
     -------
     students_from_csv(file_location)
         populates student_list and course_dict from a .csv file
+    subgroups_from_csv(file_location, forced_or_preferred)
+        populates forced_subgroups_list and/or preferred_subgroups from
+        a .csv file        
     load_partition(letter_list)
         load a list of letter assignments into the letter attribute
         for each student object in Schedule.student_list
@@ -260,6 +281,60 @@ class Schedule:
         self.student_list = []
         self.course_dict = {}
 
+    def subgroups_from_csv(self, file_location, forced_or_preferred):
+        """
+        A method to populate forced_subgroups_list and preferred_subgroups_list
+        from a .csv file
+        
+        The .csv file should have two columns, each representing a pairing:
+
+        ID Num 1, ID Num 2
+        09281381, 20383882
+        42074738, 87172918
+        09281381, 63471199
+        87172918, 42074738
+        87172918, 59283715
+        
+        Suppose most ID numbers correspond to a Student object:
+        
+        student1.id = '09281381'
+        student2.id = '20383882'
+        student3.id = '42074738'
+        student4.id = '87172918'
+        student5.id = '63471199'
+        
+        For this example, suppose that '59283715' is an invalid ID number, and has
+        no student associated to it. 
+        
+        Here is how this method will parse this list of pairinns: 
+        
+        Look at the first row "09281381, 20383882". This row indicates that 
+        student1 and student2 are part of a subgroup. Append these:
+        
+        subgroups_list = [[student1, student2]]
+        
+        The second row indicates that student3 and student 4 are in a 
+        subgroup, so update the list as follows:
+        
+        subgroups_list = [[student1, student2], [student3, student4]]
+        
+        The third row indicates that 
+   
+        subgroupsIf there exists a Student 
+        object, student1, with student1.id = 09281381 and a Student object, 
+        student2, with student2.id = 20383882, then these student objects are
+        said to be part of a subgroup. 
+        
+        FINISH THIS DOCUMENTATION
+        
+        Parameters
+        ----------
+        csv_file_location : str
+            the file path of a .csv file with student enrollment data, for 
+            example C:\\Users\\jsmith\\student_data.csv
+        """
+        Pass
+        
     def students_from_csv(self, file_location):
         """
         A method to populate student_list and course_dict from a .csv file
@@ -508,6 +583,20 @@ class Schedule:
                 
                 file.write("\n")
 
+    # TO DO: UPDATE THIS ANALYSIS TO AGREE WITH THE FITNESS FUNCTION
+    # THE NEW FITNESS FUNCTION COUNTS MORE SECTIONS AS "IN COMPLIANCE",
+    # WHICH EITHER NEEDS TO BE CHANGED BACK OR INCORPORATED INTO THIS
+    # ANALYSIS SO THAT THE RESULTS ARE CONSISTENT
+    
+    # TO DO: UPDATE CODE BELOW TO EMULATE @jmoon81's CHANGES TO THE 
+    # FITNESS FUNCTION. FOR EXAMPLE, DO NOT USE THE FOLLOWING: 
+    # possible_letter_list = [chr(i + 65) for i in range(0, self.number_of_partitions)]
+    # THIS IS BECAUSE HE ALREADY HARD CODED THE FOLLOWING: 
+    # if NUMBER_OF_PARTITIONS == 2:
+    #   STUDENT_LETTER_LIST = ["A", "B"]
+    # elif NUMBER_OF_PARTITIONS == 4:
+    #   STUDENT_LETTER_LIST = ["A", "B", "C", "D"]
+    
     def write_course_analysis(self):
         """
         A method to write an report of the letter breakdown in each classroom
@@ -648,12 +737,16 @@ class Schedule:
                         # of the four groups:
                         
                         qcm = self.quarter_class_maximum 
-                        check_individually = (a_count <= qcm and b_count <= qcm and c_count <= qcm and d_count <= qcm)
+                        check_individually = (a_count <= qcm 
+                                            and b_count <= qcm 
+                                            and c_count <= qcm 
+                                            and d_count <= qcm)
                         
                         # we also require that the (A+B) and (C+D) combined 
                         # groups are no more than self.half_class_maximum students
                         # (default value 15):                        
-                        check_pairs = (a_count + b_count <= self.half_class_maximum and c_count + d_count <= self.half_class_maximum)
+                        check_pairs = (a_count + b_count <= self.half_class_maximum 
+                                    and c_count + d_count <= self.half_class_maximum)
                         
                         # if the course passes both tests, it is "In Compliance"
                         if check_individually and check_pairs:
@@ -791,10 +884,11 @@ class Schedule:
                 # b_count <= self.half_class_maximum 
                 # at the same time. 
                 # Instead we try to make sure that the relative
-                # ratio between A's and B's is better than a 55/45 split:
+                # ratio between A's and B's is better than a 
+                # pairwise_tolerance split:
                 elif a_percent > pairwise_tolerance:
                     # penalize if the section deviates from a 
-                    # 55/45 split between A/B
+                    # pairwise_tolerance split between A/B
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
                 elif b_percent > pairwise_tolerance: 
@@ -835,7 +929,10 @@ class Schedule:
                 # check if there are no more than self.quarter_class_maximum
                 # (9) students of any letter:
                 qcm = self.quarter_class_maximum
-                check_individually = (a_count <= qcm and b_count <= qcm and c_count <= qcm and d_count <= qcm)
+                check_individually = (a_count <= qcm 
+                                    and b_count <= qcm 
+                                    and c_count <= qcm 
+                                    and d_count <= qcm)
                 
                 # check if the (A+B) count and (C+D) count are each less
                 # than self.half_class_maximum students (default value is 15):
@@ -950,11 +1047,16 @@ class Schedule:
                               and (c_percent + d_percent) <= pairwise_tolerance)
                     
                     if all_individually and all_pairwise:
-                        if total > 30:
+                        if total > 2*hcm:
                             # this is a course that is too big to ever be 
                             # "In Compliance" above, but we have at least 
                             # partitioned it evenly, so we count it as good:
                             weighted_fitness_score += 100/number_of_courses
+                            
+                            # TO DO: DEBATE WHETHER INCREMENTING HERE IS GOOD
+                            # PRACTICE. THIS COURSE IS 'AS GOOD AS IT CAN GET'
+                            # IN A SENSE BECAUSE IT CAN NEVER SATISFY THE 
+                            # REQUIREMENT SET BY self.half_class_maximum
                             good_score += 1
                         else:
                             # this should catch any cases that have been missed above 

@@ -1,8 +1,2 @@
-Generation = 1, Fitness = 54.194283245590476, In Compliance = 398 out of 602
-Generation = 2, Fitness = 54.31278969911327, In Compliance = 400 out of 602
-Generation = 3, Fitness = 55.66389805574311, In Compliance = 407 out of 602
-Generation = 4, Fitness = 55.66389805574311, In Compliance = 407 out of 602
-Generation = 5, Fitness = 55.66389805574311, In Compliance = 407 out of 602
-Generation = 6, Fitness = 56.03126772286981, In Compliance = 409 out of 602
-Generation = 7, Fitness = 56.398321833366, In Compliance = 406 out of 602
-Generation = 8, Fitness = 56.398321833366, In Compliance = 406 out of 602
+Generation = 1, Fitness = 54.9978382240868, In Compliance = 404 out of 602
+Generation = 2, Fitness = 54.9978382240868, In Compliance = 404 out of 602
