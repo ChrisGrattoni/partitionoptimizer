@@ -106,7 +106,7 @@ Other courses will not be "In Compliance" because they have an imbalance in the 
 
 ## Author
 
-* **Christopher Grattoni** - *Initial work* - [NFLtheorem](https://github.com/NFLtheorem/partitionoptimizer)
+* **Christopher Grattoni** - *Initial work* - [ChrisGrattoni](https://github.com/ChrisGrattoni/partitionoptimizer)
 
 See also the list of [contributors](https://github.com/NFLtheorem/partitionoptimizer/graphs/contributors) who participated in this project.
 
