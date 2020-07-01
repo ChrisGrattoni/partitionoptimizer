@@ -90,7 +90,7 @@ Finally, a genetic algorithm is only as good as its fitness function. You may ch
 
 ### Final Output 
 
-As the algorithm runs, it will append results to the file progress_log.txt. You can check this file to watch the progress of the algorithm. Because the first generation in this algorithm assigns student to A/B/C/D groups randomly, early generations will have a low fitness score and a limited number of courses that are rated as "In Compliance." These early generations are similar to the quality of partitions that a human could generate by hand. You should notice a significant jump in the number of "In Compliance" courses for later generations.   
+As the algorithm runs, it will append results to the file progress_log.txt. You can check this file to watch the progress of the algorithm. Because the first generation in this algorithm assigns students to A/B/C/D groups randomly, early generations will have a low fitness score and a limited number of courses that are rated as "In Compliance." These early generations are similar to the quality of partitions that a human could generate by hand. You should notice a significant jump in the number of "In Compliance" courses for later generations.   
 
 This program will also generate two final reports at the end of the algorithm: student_assignments.csv and course_analysis.csv. The student_assignments report is self-explanatory:
 
@@ -102,7 +102,7 @@ It is just a list of students and the A/B/C/D groups to which they have been ass
 
 Some of these courses will not be "In Compliance" because they are simply too large. This program defines a course as "In Compliance" if it has no more than 9 students to the A-group, 9 students to the B-group, 9 students to the C-group, and 9 students to the D-group. This is impossible if the course has 40 students in it. 
 
-Other courses will not be "In Compliance" because they have an imbalance in the size of the A/B/C/D groups that is too large. You can identify these courses by looking a large value for "Max Deviation" (as well as "In Compliance" = "No"). Sometimes, it will be possible to get some of these course to be "In Compliance" by running the algorithm longer (or running on a few machines and selecting the best results). However, schedule optimization is well known to be a difficult problem, and it is not realistic to expect 100% of courses achieving a rating of "In Compliance." 
+Other courses will not be "In Compliance" because they have an imbalance in the size of the A/B/C/D groups that is too large. You can identify these courses by looking for a large value of "Max Deviation" (as well as "In Compliance" = "No"). Sometimes, it will be possible to get some of these course to be "In Compliance" by running the algorithm longer (or running on a few machines and selecting the best results). However, schedule optimization is well known to be a difficult problem, and it is not realistic to expect 100% of courses achieving a rating of "In Compliance." 
 
 ## Author
 
