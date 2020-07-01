@@ -68,11 +68,11 @@ IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\"
 INPUT_CSV_FILENAME = "example.csv" 
 INPUT_CSV_FILENAME = IO_DIRECTORY + INPUT_CSV_FILENAME
 
-# filename of .csv file with forced student subgrouping data (default = "example_subgroups.csv) 
-FORCED_SUBGROUP_CSV_FILENAME = "example_subgroups.csv" 
+# filename of .csv file with required student subgrouping data (default = "example_subgroups.csv") 
+REQUIRED_SUBGROUP_CSV_FILENAME = "example_subgroups.csv" 
 
-if FORCED_SUBGROUP_CSV_FILENAME is not None:
-    FORCED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + FORCED_SUBGROUP_CSV_FILENAME
+if REQUIRED_SUBGROUP_CSV_FILENAME is not None:
+    REQUIRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + REQUIRED_SUBGROUP_CSV_FILENAME
 
 # filename of .csv file with preferred student subgrouping data (default = None) 
 PREFERRED_SUBGROUP_CSV_FILENAME = None
@@ -219,7 +219,7 @@ class Schedule:
         key: a course object
         value: a course roster (a list of student objects enrolled 
         in the course)
-    forced_subgroups_list : list
+    required_subgroups_list : list
         a list of tuples, where each tuple is a subgroup of students
         that must be assigned to the same letter groups, for example
         here is a list where students 1/2/3 must be assigned to the 
@@ -227,16 +227,16 @@ class Schedule:
         and student6 is in a subgroup by him/herself:
         [(student1, student2, student3), (student4, student5), (student6)]
     preferred_subgroups_list : list
-        a list in the same form as forced_subgroups_list, but subgroups
-        are not forced by the algorithm (instead, they will be encouraged
+        a list in the same form as required_subgroups_list, but subgroups
+        are not required by the algorithm (instead, they will be encouraged
         by the fitness function)
             
     Methods
     -------
     students_from_csv(file_location)
         populates student_list and course_dict from a .csv file
-    subgroups_from_csv(file_location, forced_or_preferred)
-        populates forced_subgroups_list and/or preferred_subgroups from
+    subgroups_from_csv(file_location, required_or_preferred)
+        populates required_subgroups_list and/or preferred_subgroups from
         a .csv file        
     load_partition(letter_list)
         load a list of letter assignments into the letter attribute
@@ -292,12 +292,12 @@ class Schedule:
         self.student_dict = None
         self.course_dict = {}
         
-        self.forced_subgroups_list = None
+        self.required_subgroups_list = None
         self.preferred_subgroups_list = None        
 
-    def subgroups_from_csv(self, file_location, forced_or_preferred):
+    def subgroups_from_csv(self, file_location, required_or_preferred):
         """
-        A method to populate forced_subgroups_list and preferred_subgroups_list
+        A method to populate required_subgroups_list and preferred_subgroups_list
         from a .csv file
         
         The .csv file should have two columns, each representing a pairing:
@@ -358,9 +358,9 @@ class Schedule:
         
         temp_subgroups_list = [(student1, student2, student5), (student3, student4), (student5), (student6)]
         
-        If forced_or_preferred = "forced", we assign self.forced_subgroups_list = temp_subgroups_list
+        If required_or_preferred = "required", we assign self.required_subgroups_list = temp_subgroups_list
         
-        If forced_or_preferred = "preferred", we assign self.preferred_subgroups_list = temp_subgroups_list
+        If required_or_preferred = "preferred", we assign self.preferred_subgroups_list = temp_subgroups_list
         
         Parameters
         ----------
@@ -372,10 +372,15 @@ class Schedule:
         # we only want to do something if file_location 
         # is not set to "None":
         
-        # TO DO: IF FILE_LOCATION IS NONE AND WE HAVE A FORCED PARTITION,
+        # TO DO: IF FILE_LOCATION IS NONE AND WE HAVE A REQUIRED PARTITION,
         # THEN WE STILL NEED TO CREATE A LIST OF SINGLETON TUPLES FROM 
         # student_list 
-        if file_location is not None:
+        if file_location is None and required_or_preferred == "required":
+            self.required_subgroups_list = [(student,) for student in self.student_list]
+            
+            print(self.required_subgroups_list[:5])
+            print(len(self.required_subgroups_list))
+        elif file_location is not None:
             # import the .csv:
             with open(file_location, mode='r') as infile:
                 
@@ -513,16 +518,16 @@ class Schedule:
                         temp_subgroups_list.append((student_obj,)) # singleton tuple needs a trailing comma
 
                 # TO DO: DELETE THIS ONCE THIS METHOD IS FINISHED
-                print([tuple([student.id for student in subgroup]) for subgroup in temp_subgroups_list])
+                #print([tuple([student.id for student in subgroup]) for subgroup in temp_subgroups_list])
                 
                 # now temp_subbroups_list is fully populated, 
                 # so we assign it to the appropriate attribute:
-                if forced_or_preferred == "forced":
-                    self.forced_subgroups_list = temp_subgroups_list
-                elif forced_or_preferred == "preferred":
+                if required_or_preferred == "required":
+                    self.required_subgroups_list = temp_subgroups_list
+                elif required_or_preferred == "preferred":
                     self.preferred_subgroups_list = temp_subgroups_list
                 else: 
-                    raise NameError('Subgroups must either be "forced" or "preferred"')
+                    raise NameError('Subgroups must either be "required" or "preferred"')
                 
                     
     def students_from_csv(self, file_location):
@@ -730,12 +735,17 @@ class Schedule:
             a list of letter assignments for each student at the school, for example a school with
             four students could have ["A", "B", "A", "D"]
         """
+        # TO DO: UPDATE THE DOCUMENTATION ABOVE FOR SUBGROUPS 
+        # self.required_subgroups_list replaces self.student_list
         number_of_partitions = self.number_of_partitions
         
         for i in range(len(letter_list)):
             letter = letter_list[i]
-            student = self.student_list[i]
-            student.letter = letter
+            
+            student_subgroup = self.required_subgroups_list[i]
+            
+            for student in student_subgroup:
+                student.letter = letter
 
     def write_student_assignments(self):
         """
@@ -760,7 +770,7 @@ class Schedule:
             file.write("\n")   
             
             # write a line in the .csv for each student in student_list:
-            for student_obj in self.student_list: 
+            for student_obj in self.student_list:
                 current_id = student_obj.id
                 current_last = student_obj.last_name
                 current_first = student_obj.first_name
@@ -1370,11 +1380,12 @@ class IndividualPartition(Schedule):
         
         student_partition_list = []
     
+        # TO DO: UPDATE DOCUMENTATION/COMMENTS FOR SUBGROUPS
         # use number_of_students to determine how many letters are needed
-        number_of_students = len(self.schedule_obj.student_list)
+        number_of_subgroups = len(self.schedule_obj.required_subgroups_list)
 
         # populate the list, ex: ["A", "A", "C", "B", "D", "A", ...] 
-        for _ in range(number_of_students):
+        for _ in range(number_of_subgroups):
             letter = random.choice(STUDENT_LETTER_LIST)
             student_partition_list.append(letter)        
         
@@ -1771,7 +1782,7 @@ class GeneticAlgorithm(Population):
         
         return self.population_obj.sorted_scored_population
 
-def run_loop(student_csv_path, forced_subgroups_csv_path, preferred_subgroups_csv_path, number_of_partitions, half_class_maximum, quarter_class_maximum, pop_size, rate_of_mutation, max_gen, max_time):
+def run_loop(student_csv_path, required_subgroups_csv_path, preferred_subgroups_csv_path, number_of_partitions, half_class_maximum, quarter_class_maximum, pop_size, rate_of_mutation, max_gen, max_time):
     """
     Repeat the Genetic Algorithm based on a specified number of generations (or time limit)
                 
@@ -1779,8 +1790,8 @@ def run_loop(student_csv_path, forced_subgroups_csv_path, preferred_subgroups_cs
     ----------
     student_csv_path : str
         the location of the input.csv with student schedule data
-    forced_subgroups_csv_path : str
-        the location of the input.csv with forced subgrouping data
+    required_subgroups_csv_path : str
+        the location of the input.csv with required subgrouping data
     preferred_subgroups_csv_path : str
         the location of the input.csv with preferred subgrouping data
     number_of_partitions: int
@@ -1820,8 +1831,8 @@ def run_loop(student_csv_path, forced_subgroups_csv_path, preferred_subgroups_cs
     # load school data into the Schedule object
     load_schedule.students_from_csv(student_csv_path)
     
-    # load forced subgroups into the Schedule object
-    load_schedule.subgroups_from_csv(forced_subgroups_csv_path, "forced")    
+    # load required subgroups into the Schedule object
+    load_schedule.subgroups_from_csv(required_subgroups_csv_path, "required")    
     
     # load preferred subgroups into the Schedule object
     load_schedule.subgroups_from_csv(preferred_subgroups_csv_path, "preferred")
@@ -1939,7 +1950,7 @@ def run_loop(student_csv_path, forced_subgroups_csv_path, preferred_subgroups_cs
 
 # a possible target for using the multiprocessing module:     
 def main():
-    run_loop(INPUT_CSV_FILENAME, FORCED_SUBGROUP_CSV_FILENAME, PREFERRED_SUBGROUP_CSV_FILENAME, NUMBER_OF_PARTITIONS, HALF_CLASS_MAXIMUM, QUARTER_CLASS_MAXIMUM, POPULATION_SIZE, MUTATION_RATE, NUMBER_OF_GENERATIONS, TIME_LIMIT)
+    run_loop(INPUT_CSV_FILENAME, REQUIRED_SUBGROUP_CSV_FILENAME, PREFERRED_SUBGROUP_CSV_FILENAME, NUMBER_OF_PARTITIONS, HALF_CLASS_MAXIMUM, QUARTER_CLASS_MAXIMUM, POPULATION_SIZE, MUTATION_RATE, NUMBER_OF_GENERATIONS, TIME_LIMIT)
 
 if __name__ == "__main__":
     main()
