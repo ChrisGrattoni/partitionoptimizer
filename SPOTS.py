@@ -760,7 +760,17 @@ class Schedule:
                 # if it has no more than self.half_class_maximum
                 # A's and self.half_class_maximum B's (default 
                 # value is 15):
-                if a_count <= self.half_class_maximum and b_count <= self.half_class_maximum:
+                hcm = self.half_class_maximum
+                
+                # our tolerance for applying a penalty based on the 
+                # the ratio of A to B groups (usually set to 55%) 
+                # 
+                # for a small class, 55% might not be feasible, so we set
+                # it to (total/2 + 1)/total instead
+                #                
+                pairwise_tolerance = max([0.55, (total/2+1)/total])
+                
+                if a_count <= hcm and b_count <= hcm:
                     # increment the raw "In Compliance" score:
                     good_score += 1 
                     # increment the weighted_fitness_score
@@ -770,10 +780,10 @@ class Schedule:
                     weighted_fitness_score += 100/number_of_courses 
                 # otherwise, apply a penalty based on how far the course
                 # deviates from a 50/50 split betwen A's and B':
-                elif a_count <= self.half_class_maximum and b_count > self.half_class_maximum:
+                elif a_count <= hcm and b_count > hcm:
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
-                elif a_count > self.half_class_maximum and b_count <= self.half_class_maximum:
+                elif a_count > hcm and b_count <= hcm:
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
                 # If we make it here, a_count and b_count are 
@@ -785,12 +795,12 @@ class Schedule:
                 # at the same time. 
                 # Instead we try to make sure that the relative
                 # ratio between A's and B's is better than a 55/45 split:
-                elif a_percent > 0.55: # this tolerance can be modified 
+                elif a_percent > pairwise_tolerance:
                     # penalize if the section deviates from a 
                     # 55/45 split between A/B
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
-                elif b_percent > 0.55: # this tolerance can be modified
+                elif b_percent > pairwise_tolerance: 
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
                 else:
@@ -824,8 +834,7 @@ class Schedule:
                 
                 # the total number of students on the roster:
                 total = len(roster)
-                
-                
+                                
                 # check if there are no more than self.quarter_class_maximum
                 # (9) students of any letter:
                 qcm = self.quarter_class_maximum
@@ -860,9 +869,9 @@ class Schedule:
                     # 
                     # decrease to emphasize "In Compliance" courses
                     #
-                    # default value of pairwise_multiplier = 0.5
+                    # default value of pairwise_multiplier = 0.3
                     #
-                    pairwise_multiplier = 0.5
+                    pairwise_multiplier = 0.3
                     
                     # individual_multiplier
                     #
@@ -883,42 +892,77 @@ class Schedule:
                     c_percent = c_count/total
                     d_percent = d_count/total
 
+                    # our tolerance for applying a penalty based on the 
+                    # relative size of the (A + B) or (C + D) groups, 
+                    # which is usually going to be set to 55%
+                    # 
+                    # for a small class, 55% might not be feasible, so we set
+                    # it to (total/2 + 1)/total instead
+                    #
+                    pairwise_tolerance = max([0.55, (total/2+1)/total])
 
-                    if a_percent + b_percent > 0.55:
+                    if a_percent + b_percent > pairwise_tolerance:
                         # see note above about pairwise_multiplier
                         weighted_fitness_score -= pairwise_multiplier*(a_percent + b_percent - 0.5)
                         penalty_count += 1
                     # subtract from weighted_fitness_score if c_percent + d_percent
-                    # is over 55% of the roster:
-                    elif c_percent + d_percent > 0.55:
+                    # exceeds the value of pairwise_tolerance:
+                    elif c_percent + d_percent > pairwise_tolerance:
                         # see note above about pairwise_multiplier
                         weighted_fitness_score -= pairwise_multiplier*(c_percent + d_percent - 0.5)
                         penalty_count += 1
 
-                    # subtract from weighted_fitness_score if a_percent exceeds 30% of the roster:
-                    if a_percent > 0.3:
+                    # our tolerance for applying a penalty based on the 
+                    # relative size of any individual A/B/C/D group
+                    # which is usually going to be set to 30%
+                    # 
+                    # for a small class, 30% might not be feasible, so we set
+                    # it to (total/4 + 1)/total instead
+                    #
+                    individual_tolerance = max([0.3, (total/4+1)/total])
+
+                    # subtract from weighted_fitness_score if a_percent exceeds the value of individual_tolerance:
+                    if a_percent > individual_tolerance:
                         # see note above about individual_multiplier
                         weighted_fitness_score -= individual_multiplier*(a_percent - 0.25)
                         penalty_count += 1
                     # subtract from weighted_fitness_score if b_percent exceeds 30% of the roster:
-                    if b_percent > 0.3:
+                    if b_percent > individual_tolerance:
                         # see note above about individual_multiplier
                         weighted_fitness_score -= individual_multiplier*(b_percent - 0.25)
                         penalty_count += 1
                     # subtract from weighted_fitness_score if c_percent exceeds 30% of the roster:
-                    if c_percent > 0.3:
+                    if c_percent > individual_tolerance:
                         # see note above about individual_multiplier
                         weighted_fitness_score -= individual_multiplier*(c_percent - 0.25)
                         penalty_count += 1
                     # subtract from weighted_fitness_score if d_percent exceeds 30% of the roster:
-                    if d_percent > 0.3:
+                    if d_percent > individual_tolerance:
                         # see note above about individual_multiplier
                         weighted_fitness_score -= individual_multiplier*(d_percent - 0.25)
                         penalty_count += 1
                    
                     # an "Out of Compliance" section for which no penalty was applied:                    
-                    if (a_percent <= 0.3 and b_percent <= 0.3 and c_percent <= 0.3 and d_percent <= 0.3) and (a_percent + b_percent <= 0.55 and (c_percent + d_percent) <= 0.55):
-                        other_score += 1        
+                    
+                    all_individually = (a_percent <= individual_tolerance
+                                        and b_percent <= individual_tolerance 
+                                        and c_percent <= individual_tolerance 
+                                        and d_percent <= individual_tolerance)
+                   
+                    all_pairwise = (a_percent + b_percent <= pairwise_tolerance
+                              and (c_percent + d_percent) <= pairwise_tolerance)
+                    
+                    if all_individually and all_pairwise:
+                        if total > 30:
+                            # this is a course that is too big to ever be 
+                            # "In Compliance" above, but we have at least 
+                            # partitioned it evenly, so we count it as good:
+                            weighted_fitness_score += 100/number_of_courses
+                            good_score += 1
+                        else:
+                            # this should catch any cases that have been missed above 
+                            other_score += 1
+                            
         else:
             print("In order to choose something other than an AB or ABCD partition, you must add your own fitness function")    
             raise NotImplementedError
