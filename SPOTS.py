@@ -196,10 +196,8 @@ class Schedule:
         into four subgroups of roughly equal size
         (default value is 9)
     student_list : list
-        a list of tuples in the form (student_object, schedule_list) 
-        student_object: an object representing a single student
-        student_schedule: a list of course objects that the student 
-        is enrolled in
+        an ordered list of student objects, where each student object
+        represents a single student at the school
     course_dict : dict
         key: a course object
         value: a course roster (a list of student objects enrolled 
@@ -443,7 +441,7 @@ class Schedule:
             for key in temp_student_dict:
                 student_obj = temp_student_dict[key]
                 schedule = student_obj.schedule
-                self.student_list.append((student_obj, schedule))
+                self.student_list.append(student_obj)
 
     def load_partition(self, letter_list):
         """
@@ -471,7 +469,7 @@ class Schedule:
         
         for i in range(len(letter_list)):
             letter = letter_list[i]
-            student = self.student_list[i][0]
+            student = self.student_list[i]
             student.letter = letter
 
     def write_student_assignments(self):
@@ -497,8 +495,7 @@ class Schedule:
             file.write("\n")   
             
             # write a line in the .csv for each student in student_list:
-            for tuple in self.student_list: 
-                student_obj = tuple[0]
+            for student_obj in self.student_list: 
                 current_id = student_obj.id
                 current_last = student_obj.last_name
                 current_first = student_obj.first_name
@@ -989,8 +986,7 @@ class Schedule:
             a student's ID number
         """
 
-        for tuple in self.student_list:
-            student = tuple[0]
+        for student in self.student_list:
             if student.id == student_id:
                 student_letter_name = "Group: " + student.letter + ", Name: " + student.last_name + ", " + student.first_name
                 current_classes = tuple[1]
