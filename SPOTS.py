@@ -371,6 +371,10 @@ class Schedule:
         
         # we only want to do something if file_location 
         # is not set to "None":
+        
+        # TO DO: IF FILE_LOCATION IS NONE AND WE HAVE A FORCED PARTITION,
+        # THEN WE STILL NEED TO CREATE A LIST OF SINGLETON TUPLES FROM 
+        # student_list 
         if file_location is not None:
             # import the .csv:
             with open(file_location, mode='r') as infile:
@@ -411,9 +415,20 @@ class Schedule:
                             
                             # for each existing subgroup
                             for subgroup in temp_subgroups_list:
+                                # if both student objects are in the subgroup, then we 
+                                # are done with these two student objects 
+                                if student_obj1 in subgroup and student_obj2 in subgroup:
+                                    # set found_flag to True to indicate that we have managed
+                                    # to verify that our students are already in a subgroup
+                                    found_flag = True
+                                    
+                                    # at this point, there is no reason to continue with the current
+                                    # loop so we break:
+                                    break                                    
+                                    
                                 # if student_obj1 is in the subgroup, but student_obj2 is not, 
-                                # then add student_obj2 to the subgroup:
-                                if student_obj1 in subgroup and student_obj2 not in subgroup:
+                                # then add student_obj2 to the subgroup:                                    
+                                elif student_obj1 in subgroup and student_obj2 not in subgroup:
                                     subgroup.append(student_obj2)
                                     
                                     # set found_flag to True to indicate that we have managed
@@ -446,7 +461,8 @@ class Schedule:
                             #
                             # in this case we create a new subgroup with the student objects
                             
-                            temp_subgroups_list.append([student_obj1, student_obj2])
+                            if found_flag is not True:
+                                temp_subgroups_list.append([student_obj1, student_obj2])
                 
                 # once we have completed this for every row of the .csv, we have successfully
                 # populated temp_subgroups_list with every student subgroup of size > 1
@@ -455,8 +471,8 @@ class Schedule:
                 temp_subgroups_list = [tuple(subgroup) for subgroup in temp_subgroups_list]
                 
                 # TO DO: USE THIS PRINT STATEMENT TO DEBUG                
-                print([[student.id for student in subgroup] for subgroup in temp_subgroups_list])
-                
+                debug_list = []
+               
                 # finally, each Student object that is in student_list but does not currently
                 # appear in a subgroup is actually a subgroup of length 1
                 #
@@ -486,27 +502,28 @@ class Schedule:
                             # know that student_obj needs to be added
                             # to temp_subgroups_list as a subgroup of 
                             # length 1
+                            
                             break
                             
                     
                     # if we have not found the flag ("not found_flag" evaluates to True)
-                    if not found_flag:
+                    if found_flag is not True:
                         # then append the student to temp_subgroups_list as a subgroup
                         # of length 1:
-                        temp_subgroups_list.append((student_obj))
+                        temp_subgroups_list.append((student_obj,)) # singleton tuple needs a trailing comma
+
+                # TO DO: DELETE THIS ONCE THIS METHOD IS FINISHED
+                print([tuple([student.id for student in subgroup]) for subgroup in temp_subgroups_list])
                 
                 # now temp_subbroups_list is fully populated, 
                 # so we assign it to the appropriate attribute:
                 if forced_or_preferred == "forced":
                     self.forced_subgroups_list = temp_subgroups_list
-                    print(self.forced_subgroups_list)
                 elif forced_or_preferred == "preferred":
                     self.preferred_subgroups_list = temp_subgroups_list
-                    print(self.preferred_subgroups_list)
                 else: 
                     raise NameError('Subgroups must either be "forced" or "preferred"')
                 
-                print("Hello World")
                     
     def students_from_csv(self, file_location):
         """
