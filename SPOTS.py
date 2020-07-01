@@ -66,13 +66,19 @@ IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\"
 
 # filename of .csv file with student schedule data (default = "example.csv) 
 INPUT_CSV_FILENAME = "example.csv" 
+INPUT_CSV_FILENAME = IO_DIRECTORY + INPUT_CSV_FILENAME
 
 # filename of .csv file with forced student subgrouping data (default = "example_subgroups.csv) 
 FORCED_SUBGROUP_CSV_FILENAME = "example_subgroups.csv" 
 
+if FORCED_SUBGROUP_CSV_FILENAME is not None:
+    FORCED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + FORCED_SUBGROUP_CSV_FILENAME
+
 # filename of .csv file with preferred student subgrouping data (default = None) 
 PREFERRED_SUBGROUP_CSV_FILENAME = None
 
+if PREFERRED_SUBGROUP_CSV_FILENAME is not None:
+    PREFERRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + PREFERRED_SUBGROUP_CSV_FILENAME
 
 # time measured in minutes (default = 480 min or 8 hr)
 TIME_LIMIT = 60*8 
@@ -205,6 +211,10 @@ class Schedule:
     student_list : list
         an ordered list of student objects, where each student object
         represents a single student at the school
+    student_dict : dict
+        key: a student ID number (a unique identifier for a student)
+        value: the associated student object
+    
     course_dict : dict
         key: a course object
         value: a course roster (a list of student objects enrolled 
@@ -279,7 +289,11 @@ class Schedule:
         # before Python 3.7, dictionary order was not guaranteed
         #
         self.student_list = []
+        self.student_dict = None
         self.course_dict = {}
+        
+        self.forced_subgroups_list = None
+        self.preferred_subgroups_list = None        
 
     def subgroups_from_csv(self, file_location, forced_or_preferred):
         """
@@ -311,30 +325,189 @@ class Schedule:
         Look at the first row "09281381, 20383882". This row indicates that 
         student1 and student2 are part of a subgroup. Append these:
         
-        subgroups_list = [[student1, student2]]
+        temp_subgroups_list = [[student1, student2]]
         
         The second row indicates that student3 and student 4 are in a 
         subgroup, so update the list as follows:
         
-        subgroups_list = [[student1, student2], [student3, student4]]
+        temp_subgroups_list = [[student1, student2], [student3, student4]]
         
-        The third row indicates that 
+        The third row indicates that student5 should be added to the subgroup
+        containing student1: 
+        
+        temp_subgroups_list = [[student1, student2, student5], [student3, student4]]
+
+        The fourth row is superfluous since student3 and student4 are already in
+        a subgroup, so no action is taken.
+        
+        The fifth row pairs student4 with a non-existent student, so no action
+        is taken. 
+        
+        Next, convert our nested list into a list of tuples:
+        
+        temp_subgroups_list = [(student1, student2, student5), (student3, student4)]
    
-        subgroupsIf there exists a Student 
-        object, student1, with student1.id = 09281381 and a Student object, 
-        student2, with student2.id = 20383882, then these student objects are
-        said to be part of a subgroup. 
+        Finally, we check student_list against temp_subgroups_list. Each student
+        in student_list that is not in temp_subgroups_list represents a subgroup
+        of size 1. We append these to temp_subgroups_list. For example, suppose 
+        we have the following: 
         
-        FINISH THIS DOCUMENTATION
+        student_list = [student1, student2, student3, student4, student5, student6]
+        
+        Then we write the following: 
+        
+        temp_subgroups_list = [(student1, student2, student5), (student3, student4), (student5), (student6)]
+        
+        If forced_or_preferred = "forced", we assign self.forced_subgroups_list = temp_subgroups_list
+        
+        If forced_or_preferred = "preferred", we assign self.preferred_subgroups_list = temp_subgroups_list
         
         Parameters
         ----------
         csv_file_location : str
-            the file path of a .csv file with student enrollment data, for 
-            example C:\\Users\\jsmith\\student_data.csv
+            the file path of a .csv file with student pairing data, for 
+            example C:\\Users\\jsmith\\student_pairings.csv
         """
-        Pass
         
+        # we only want to do something if file_location 
+        # is not set to "None":
+        if file_location is not None:
+            # import the .csv:
+            with open(file_location, mode='r') as infile:
+                
+                # a place to store subgroups
+                temp_subgroups_list = []
+                
+                # read the .csv file            
+                reader = csv.reader(infile)
+                
+                # skip the first row since the first row contains headers
+                next(reader) 
+                
+                # description of the columns in the .csv file:
+                for row in reader:
+                    # row[0] : First student ID number
+                    first_id = row[0]
+                    
+                    # row[1] : Second student ID number
+                    second_id = row[1]
+                    
+                    # check if both student ID numbers are valid by checkinget
+                    # if the ID numbers are keys in self.student_dict:
+                    if first_id in self.student_dict and second_id in self.student_dict:
+                        # if they are, then store the Student objects:
+                        student_obj1 = self.student_dict[first_id]
+                        student_obj2 = self.student_dict[second_id]
+                        
+                        # if temp_subgroups_list is empty, then we have our first subgroup,
+                        # which we store as [[student_obj1, student_obj2]]
+                        if len(temp_subgroups_list) == 0:
+                            temp_subgroups_list.append([student_obj1, student_obj2])
+                        # otherwise, we need to check whether we have to append to 
+                        # an existing subgroup or create a new one:
+                        else: 
+                            
+                            found_flag = False
+                            
+                            # for each existing subgroup
+                            for subgroup in temp_subgroups_list:
+                                # if student_obj1 is in the subgroup, but student_obj2 is not, 
+                                # then add student_obj2 to the subgroup:
+                                if student_obj1 in subgroup and student_obj2 not in subgroup:
+                                    subgroup.append(student_obj2)
+                                    
+                                    # set found_flag to True to indicate that we have managed
+                                    # to fit our students into a subgroup
+                                    found_flag = True
+                                    
+                                    # at this point, there is no reason to continue with the current
+                                    # loop so we break:
+                                    break
+                                    
+                                # similarly, if student_obj1 is NOT in the subgroup but 
+                                # student_obj2 is, then add student_obj1 to the subgroup:                            
+                                elif student_obj1 not in subgroup and student_obj2 in subgroup:
+                                    subgroup.append(student_obj1)
+                                    
+                                    # set found_flag to True to indicate that we have managed
+                                    # to fit our students into a subgroup
+                                    found_flag = True
+                                    
+                                    # at this point, there is no reason to continue with the current
+                                    # loop so we break:
+                                    break                                
+                            
+
+                            # if the above for loop completes without finding a subgroup, then
+                            # found_flag will remain False and we also know the following: 
+                            #
+                            # 1. student_obj1 and student_obj2 are valid students
+                            # 2. these students are not a part of any existing subgroup
+                            #
+                            # in this case we create a new subgroup with the student objects
+                            
+                            temp_subgroups_list.append([student_obj1, student_obj2])
+                
+                # once we have completed this for every row of the .csv, we have successfully
+                # populated temp_subgroups_list with every student subgroup of size > 1
+                
+                # since we are done appending to subgroups, convert to a list of tuples:            
+                temp_subgroups_list = [tuple(subgroup) for subgroup in temp_subgroups_list]
+                
+                # TO DO: USE THIS PRINT STATEMENT TO DEBUG                
+                print([[student.id for student in subgroup] for subgroup in temp_subgroups_list])
+                
+                # finally, each Student object that is in student_list but does not currently
+                # appear in a subgroup is actually a subgroup of length 1
+                #
+                # we need to add these to temp_subgroups_list:
+                
+                # for each Student_object in self.student_list
+                for student_obj in self.student_list:
+                    
+                    # a flag to indicate that we have not found 
+                    # the student in a subgroup yet
+                    found_flag = False                   
+                    
+                    # for each existing subgroup:
+                    for subgroup in temp_subgroups_list:                       
+                        
+                        # if the student object is found in the subgroup
+                        if student_obj in subgroup:
+                            
+                            # then the student has been found
+                            found_flag = True
+                            
+                            # and we can break out of the loop
+                            break
+                        # if we reach subgroups of length 1
+                        elif len(subgroup) == 1:
+                            # then we can stop our search because we 
+                            # know that student_obj needs to be added
+                            # to temp_subgroups_list as a subgroup of 
+                            # length 1
+                            break
+                            
+                    
+                    # if we have not found the flag ("not found_flag" evaluates to True)
+                    if not found_flag:
+                        # then append the student to temp_subgroups_list as a subgroup
+                        # of length 1:
+                        temp_subgroups_list.append((student_obj))
+                
+                # now temp_subbroups_list is fully populated, 
+                # so we assign it to the appropriate attribute:
+                if forced_or_preferred == "forced":
+                    self.forced_subgroups_list = temp_subgroups_list
+                    print(self.forced_subgroups_list)
+                elif forced_or_preferred == "preferred":
+                    self.preferred_subgroups_list = temp_subgroups_list
+                    print(self.preferred_subgroups_list)
+                else: 
+                    raise NameError('Subgroups must either be "forced" or "preferred"')
+                
+                print("Hello World")
+                    
     def students_from_csv(self, file_location):
         """
         A method to populate student_list and course_dict from a .csv file
@@ -377,10 +550,10 @@ class Schedule:
             temp_course_dict = {}
             
             # each student is uniquely identified by their ID number
-            # temp_student_dict is a dictionary with the following:
+            # self.student_dict is a dictionary with the following:
             # key: ID number
             # value: associated Student object
-            temp_student_dict = {}
+            self.student_dict = {}
             
             # read the .csv file            
             # note: reader method ended up being faster than csv.DictReader objects
@@ -428,9 +601,9 @@ class Schedule:
 
                 # first, set current_student to an appropriate Student object:
                 
-                # check if student_id is NOT in our temp_student_dict
-                if student_id not in temp_student_dict:
-                    # if the student is not in temp_student_dict,
+                # check if student_id is NOT in our self.student_dict
+                if student_id not in self.student_dict:
+                    # if the student is not in self.student_dict,
                     # then instantiate a Student object and assign 
                     # it to current_student:
                     current_student = Student(student_id)
@@ -438,15 +611,15 @@ class Schedule:
                     current_student.middle_name = middle_name
                     current_student.first_name = first_name
 
-                    # next, add to temp_student_dict using:
+                    # next, add to self.student_dict using:
                     # key: student_id 
                     # value: Student object
-                    temp_student_dict[student_id] = current_student                    
+                    self.student_dict[student_id] = current_student                    
                     
-                # otherwise, student_id **is** in our temp_student_dict:
+                # otherwise, student_id **is** in our self.student_dict:
                 else:
                     # access this Student object and assign it to current_student:
-                    current_student = temp_student_dict[student_id]
+                    current_student = self.student_dict[student_id]
 
                 # now current_student is assigned, but the Student object
                 # does not yet have its associated Course object appended
@@ -505,7 +678,7 @@ class Schedule:
                 new_value = new_key.roster
                 self.course_dict[new_key] = new_value
 
-            # now that temp_student_dict has a unique key for each 
+            # now that self.student_dict has a unique key for each 
             # student, we can iterate over the dictionary to populate
             # our student_list with tuples in the form (student, schedule):
             # student: a Student object 
@@ -513,8 +686,8 @@ class Schedule:
             # schedule: a list of Course objects the student is taking 
             #       (aka: a course schedule)    
             
-            for key in temp_student_dict:
-                student_obj = temp_student_dict[key]
+            for key in self.student_dict:
+                student_obj = self.student_dict[key]
                 schedule = student_obj.schedule
                 self.student_list.append(student_obj)
 
@@ -1581,14 +1754,18 @@ class GeneticAlgorithm(Population):
         
         return self.population_obj.sorted_scored_population
 
-def run_loop(path, number_of_partitions, half_class_maximum, quarter_class_maximum, pop_size, rate_of_mutation, max_gen, max_time):
+def run_loop(student_csv_path, forced_subgroups_csv_path, preferred_subgroups_csv_path, number_of_partitions, half_class_maximum, quarter_class_maximum, pop_size, rate_of_mutation, max_gen, max_time):
     """
     Repeat the Genetic Algorithm based on a specified number of generations (or time limit)
                 
     Parameters
     ----------
-    path : str
-        the location of the input.csv
+    student_csv_path : str
+        the location of the input.csv with student schedule data
+    forced_subgroups_csv_path : str
+        the location of the input.csv with forced subgrouping data
+    preferred_subgroups_csv_path : str
+        the location of the input.csv with preferred subgrouping data
     number_of_partitions: int
         the number of partitions to group students into
         2 for an A/B partition
@@ -1624,7 +1801,13 @@ def run_loop(path, number_of_partitions, half_class_maximum, quarter_class_maxim
     load_schedule = Schedule(number_of_partitions, half_class_maximum, quarter_class_maximum)
     
     # load school data into the Schedule object
-    load_schedule.students_from_csv(path)
+    load_schedule.students_from_csv(student_csv_path)
+    
+    # load forced subgroups into the Schedule object
+    load_schedule.subgroups_from_csv(forced_subgroups_csv_path, "forced")    
+    
+    # load preferred subgroups into the Schedule object
+    load_schedule.subgroups_from_csv(preferred_subgroups_csv_path, "preferred")
     
     # instantiate the IndividualPartition object
     first_partition = IndividualPartition(load_schedule)
@@ -1739,7 +1922,7 @@ def run_loop(path, number_of_partitions, half_class_maximum, quarter_class_maxim
 
 # a possible target for using the multiprocessing module:     
 def main():
-    run_loop(IO_DIRECTORY + INPUT_CSV_FILENAME, NUMBER_OF_PARTITIONS, HALF_CLASS_MAXIMUM, QUARTER_CLASS_MAXIMUM, POPULATION_SIZE, MUTATION_RATE, NUMBER_OF_GENERATIONS, TIME_LIMIT)
+    run_loop(INPUT_CSV_FILENAME, FORCED_SUBGROUP_CSV_FILENAME, PREFERRED_SUBGROUP_CSV_FILENAME, NUMBER_OF_PARTITIONS, HALF_CLASS_MAXIMUM, QUARTER_CLASS_MAXIMUM, POPULATION_SIZE, MUTATION_RATE, NUMBER_OF_GENERATIONS, TIME_LIMIT)
 
 if __name__ == "__main__":
     main()
