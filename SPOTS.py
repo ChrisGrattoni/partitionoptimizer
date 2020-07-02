@@ -214,22 +214,24 @@ class Schedule:
     student_dict : dict
         key: a student ID number (a unique identifier for a student)
         value: the associated student object
-    
     course_dict : dict
         key: a course object
         value: a course roster (a list of student objects enrolled 
         in the course)
     required_subgroups_list : list
         a list of tuples, where each tuple is a subgroup of students
-        that must be assigned to the same letter groups, for example
-        here is a list where students 1/2/3 must be assigned to the 
-        same letter, students 3/4 must be assigned to the same letter,
-        and student6 is in a subgroup by him/herself:
+        that must be assigned to the same letter group
+        
+        example: here is a list where students 1/2/3 must be assigned 
+        to the same letter, students 3/4 must be assigned to the same 
+        letter, and student6 is in a subgroup by him/herself:
+        
         [(student1, student2, student3), (student4, student5), (student6)]
+        
     preferred_subgroups_list : list
         a list in the same form as required_subgroups_list, but subgroups
-        are not required by the algorithm (instead, they will be encouraged
-        by the fitness function)
+        are not required by the algorithm 
+        (instead, this will be encouraged by the fitness function)
             
     Methods
     -------
@@ -240,7 +242,7 @@ class Schedule:
         a .csv file        
     load_partition(letter_list)
         load a list of letter assignments into the letter attribute
-        for each student object in Schedule.student_list
+        for each subgroup of student objects in Schedule.required_subgroups_list
     write_student_assignments()
         write a report of final student assignments in .csv format
     write_course_analysis()
@@ -320,7 +322,7 @@ class Schedule:
         For this example, suppose that '59283715' is an invalid ID number, and has
         no student associated to it. 
         
-        Here is how this method will parse this list of pairinns: 
+        Here is how this method will parse this list of pairings: 
         
         Look at the first row "09281381, 20383882". This row indicates that 
         student1 and student2 are part of a subgroup. Append these:
@@ -372,12 +374,16 @@ class Schedule:
         # we only want to do something if file_location 
         # is not set to "None":
         
-        # TO DO: IF FILE_LOCATION IS NONE AND WE HAVE A REQUIRED PARTITION,
-        # THEN WE STILL NEED TO CREATE A LIST OF SINGLETON TUPLES FROM 
-        # student_list 
+        # if file_location is None and require_or_preferred = "required"
+        # then all of our subgroups are of size 1 (each student comprises
+        # their own subgroup):
         if file_location is None and required_or_preferred == "required":
-            self.required_subgroups_list = [(student,) for student in self.student_list]
+            # our required_subgroups_list is a list of tuples each 
+            # containing a single Student object, which is represented
+            # as a tuple with a trailing comma:
+            self.required_subgroups_list = [(student,) for student in self.student_list] 
 
+        # otherwise, if there is a file to read:
         elif file_location is not None:
             # import the .csv:
             with open(file_location, mode='r') as infile:
@@ -399,7 +405,7 @@ class Schedule:
                     # row[1] : Second student ID number
                     second_id = row[1]
                     
-                    # check if both student ID numbers are valid by checkinget
+                    # check if both student ID numbers are valid by checking
                     # if the ID numbers are keys in self.student_dict:
                     if first_id in self.student_dict and second_id in self.student_dict:
                         # if they are, then store the Student objects:
@@ -414,6 +420,8 @@ class Schedule:
                         # an existing subgroup or create a new one:
                         else: 
                             
+                            # use found_flag to track if we have found a subgroup 
+                            # containing student_obj1 or student_obj2:
                             found_flag = False
                             
                             # for each existing subgroup
@@ -455,7 +463,6 @@ class Schedule:
                                     # loop so we break:
                                     break                                
                             
-
                             # if the above for loop completes without finding a subgroup, then
                             # found_flag will remain False and we also know the following: 
                             #
@@ -463,7 +470,6 @@ class Schedule:
                             # 2. these students are not a part of any existing subgroup
                             #
                             # in this case we create a new subgroup with the student objects
-                            
                             if found_flag is not True:
                                 temp_subgroups_list.append([student_obj1, student_obj2])
                 
@@ -472,12 +478,9 @@ class Schedule:
                 
                 # since we are done appending to subgroups, convert to a list of tuples:            
                 temp_subgroups_list = [tuple(subgroup) for subgroup in temp_subgroups_list]
-                
-                # TO DO: USE THIS PRINT STATEMENT TO DEBUG                
-                debug_list = []
                
-                # finally, each Student object that is in student_list but does not currently
-                # appear in a subgroup is actually a subgroup of length 1
+                # finally, each Student object that is in student_list but does not 
+                # currently appear in a subgroup is actually a subgroup of length 1
                 #
                 # we need to add these to temp_subgroups_list:
                 
@@ -505,18 +508,13 @@ class Schedule:
                             # know that student_obj needs to be added
                             # to temp_subgroups_list as a subgroup of 
                             # length 1
-                            
                             break
                             
-                    
                     # if we have not found the flag ("not found_flag" evaluates to True)
                     if found_flag is not True:
                         # then append the student to temp_subgroups_list as a subgroup
                         # of length 1:
                         temp_subgroups_list.append((student_obj,)) # singleton tuple needs a trailing comma
-
-                # TO DO: DELETE THIS ONCE THIS METHOD IS FINISHED
-                #print([tuple([student.id for student in subgroup]) for subgroup in temp_subgroups_list])
                 
                 # now temp_subbroups_list is fully populated, 
                 # so we assign it to the appropriate attribute:
@@ -716,13 +714,13 @@ class Schedule:
         A method to load a list of letters into the letter attribute for 
         each student object in Schedule.student_list
         
-        For example, suppose letter_list = ["A", "B", "A", "D"]. Also suppose that 
-        student_list = [student_obj1, student_obj2, student_obj3, student_obj4].
+        For example, suppose letter_list = ["A", "B", "D"]. Also suppose that 
+        required_subgroups_list = [(student_obj1, student_obj2), (student_obj3,), (student_obj4,)].
         Then Schedule.load_partition(letter_list) would lead to the following result:
         
         student_obj1.letter = "A"
-        student_obj2.letter = "B"
-        student_obj3.letter = "A"
+        student_obj2.letter = "A"
+        student_obj3.letter = "B"
         student_obj4.letter = "D"
         
         This method is used when we need to evaluate the fitness of a newly-generated partition.
@@ -730,18 +728,19 @@ class Schedule:
         Parameters
         ----------
         letter_list : list
-            a list of letter assignments for each student at the school, for example a school with
-            four students could have ["A", "B", "A", "D"]
+            a list of letter assignments for each subgroup at the school, for example a school with
+            four subgroups could have ["A", "B", "A", "D"]
         """
-        # TO DO: UPDATE THE DOCUMENTATION ABOVE FOR SUBGROUPS 
-        # self.required_subgroups_list replaces self.student_list
+
         number_of_partitions = self.number_of_partitions
         
         for i in range(len(letter_list)):
             letter = letter_list[i]
             
+            # get the subgroup from the list
             student_subgroup = self.required_subgroups_list[i]
             
+            # assign the same letter to every student in the subgroup
             for student in student_subgroup:
                 student.letter = letter
 
@@ -1342,8 +1341,8 @@ class Schedule:
 
 class IndividualPartition(Schedule):
     """
-    A class used to store an individual partition of the student
-    body as an ordered list of letter assignments
+    A class used to store an individual partition of student
+    subgroups as an ordered list of letter assignments
     
     Ex: ["A", "A", "C", "B", "D", "A", ...]
     
@@ -1356,7 +1355,7 @@ class IndividualPartition(Schedule):
         inherited from the schedule class
         
     partition : list
-        an individual partition of the student body stored as a 
+        an individual partition of student subgroups stored as a 
         list of letters, ex: ["A", "A", "C", "B", "D", "A", ...]
         
     fitness: tuple
@@ -1401,8 +1400,7 @@ class IndividualPartition(Schedule):
         
         student_partition_list = []
     
-        # TO DO: UPDATE DOCUMENTATION/COMMENTS FOR SUBGROUPS
-        # use number_of_students to determine how many letters are needed
+        # use number_of_subgroups to determine how many letters are needed
         number_of_subgroups = len(self.schedule_obj.required_subgroups_list)
 
         # populate the list, ex: ["A", "A", "C", "B", "D", "A", ...] 
