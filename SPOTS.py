@@ -69,7 +69,8 @@ NUMBER_OF_ERAS = 1000
 NUMBER_OF_GENERATIONS_PER_ERA = 25
 
 # location of input .csv file, (example: "C:\\Users\\jsmith\\Desktop\\")
-IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\" 
+#IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\" 
+IO_DIRECTORY = "" 
 
 # filename of .csv file with student schedule data (default = "example.csv) 
 INPUT_CSV_FILENAME = "example.csv" 
@@ -2069,6 +2070,7 @@ def run_era(student_csv_path, required_subgroups_csv_path, preferred_subgroups_c
         # Concatenate a string to report progress:
         progress_string = "PID[" + process_ID_as_string + "]: "
         progress_string += "Generation = "
+        progress_string += str(generation_number)
         progress_string += ", Fitness = "
         progress_string += str(previous_population[0][0][0])
         progress_string += ", In Compliance = "
@@ -2202,21 +2204,50 @@ def get_crossed_children(population1, population2, num_children):
         # length of a partition
         genome_length = len(parent1)
         
-        # determine a random cutpoint 
-        cutpoint = random.randint(1, genome_length - 1)
-        
-        # slice both parents at the cutpoint:
-        parent1_slice1 = parent1[:cutpoint] 
-        parent1_slice2 = parent1[cutpoint:] 
-        
-        parent2_slice1 = parent2[:cutpoint] 
-        parent2_slice2 = parent2[cutpoint:] 
-        
-        # create the children by combining the slices (crossover)
-        child1 = parent1_slice1 + parent2_slice2
-        child2 = parent2_slice1 + parent1_slice2
-        
 
+        """
+        a given pair of parents create 2 new children:
+            1. child1 starts off as a clone of parent1, just as child2 starts off as a clone of parent2.
+            2. these 2 clones then have an opportunity to swap some genes (individual student letter assignments).
+               this happens by selecting a random [relatively small] subset of itself (i.e. a set of indices), and 
+               having child1 and child2 swap their letters at these indices.
+
+               the idea is that each parent might have a found a successful schedule of a small "chunk" of students
+               that the other parent did not find yet (or was not successful in that overall environment), and this
+               is a way to inject those small "local" changes (local in the sense that it is an improvement that can
+               be made to a small cohort of students that doesn't really affect those outside of this cohort).
+            3. so whenever we take a parent from island1 to cross it with a parent from island2, the original population
+               [of island1] gets 2 children: one that is a near-clone of parent1 (and island1 native), and another one
+               that is a near-clone of parent2 (a foreigner from island2)
+
+        ****
+
+        I HAVE NO IDEA IF THIS "SHOULD" WORK OR WHAT... it's just what I came up with from "thinking about it",
+        and it seems to yield some improvements in my testing. if you find an improvement, that's even better!
+        """
+
+
+        # child1 and child2 start off as clones of their respective parents
+        child1 = parent1[:]
+        child2 = parent2[:]
+
+
+        # size of cohort to inject, i.e. number of letters to replace in the partition
+        # this is purely based on [what seems right to me] based on some limited experimentation
+        # far from finalized, please feel free to play around with the parameters
+        # some small number (such as between 10 and 40) seems to work best
+        injection_size = max(random.randint(10,40), genome_length)
+
+        # choose injection_size random indexes which will get the other parent's genes
+        for _ in range(injection_size):
+            # choose 
+            rand_index = random.randint(0, genome_length-1)
+            temp = child1[rand_index]
+            child1[rand_index] = child2[rand_index]
+            child2[rand_index] = temp
+
+     
+        # add the pair of children to the output list
         crossed_children_list.append(child1)
         crossed_children_list.append(child2)
 
