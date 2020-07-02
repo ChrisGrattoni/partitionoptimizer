@@ -69,7 +69,7 @@ INPUT_CSV_FILENAME = "example.csv"
 INPUT_CSV_FILENAME = IO_DIRECTORY + INPUT_CSV_FILENAME
 
 # filename of .csv file with required student subgrouping data (default = "example_subgroups.csv") 
-REQUIRED_SUBGROUP_CSV_FILENAME = "example_subgroups.csv" 
+REQUIRED_SUBGROUP_CSV_FILENAME = None #"example_subgroups_v2.csv" 
 
 if REQUIRED_SUBGROUP_CSV_FILENAME is not None:
     REQUIRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + REQUIRED_SUBGROUP_CSV_FILENAME
@@ -377,9 +377,7 @@ class Schedule:
         # student_list 
         if file_location is None and required_or_preferred == "required":
             self.required_subgroups_list = [(student,) for student in self.student_list]
-            
-            print(self.required_subgroups_list[:5])
-            print(len(self.required_subgroups_list))
+
         elif file_location is not None:
             # import the .csv:
             with open(file_location, mode='r') as infile:
@@ -1266,6 +1264,29 @@ class Schedule:
             print("In order to choose something other than an AB or ABCD partition, you must add your own fitness function")    
             raise NotImplementedError
         
+        if self.preferred_subgroups_list is not None:
+            number_of_subgroups = len(self.preferred_subgroups_list)
+            
+            for subgroup in self.preferred_subgroups_list:
+                subgroup_letter_set = {}
+                
+                for student in subgroup:
+                    subgroup_letter_set.add(student.letter)
+                    
+                if len(subgroup_letter_set) > 1:
+                    # TO DO: DISCUSS THE BEST APPROACH FOR PENALIZING
+                    # VIOLATIONS OF PREFERRED_SUBGROUPS AND HOW TO APPLY
+                    # THE PENALTY
+                    #
+                    # SHOULD THE PENALTY BASED ON HOW SEVERE THE VIOLATION IS
+                    # OR SIMPLY A RECOGNITION OF THE FACT THAT THE SUBGROUP
+                    # IS NOT ASSIGNED TO THE SAME LETTER?
+                    #
+                    # IF THE SIZE OF THE VIOLATION MATTERS, THEN WE SHOULD USE 
+                    # subgroup_letter_list = [] INSTEAD OF SETS
+                    # AND subgroup_letter_list.append(student.letter) INSTEAD OF .add
+                    weighted_fitness_score -= 100/number_of_subgroups
+        
         # return the following tuple, where weighted_fitness_score is the value 
         # we are trying to minimize and good_score is the number of courses that 
         # are in compliance
@@ -1391,7 +1412,7 @@ class IndividualPartition(Schedule):
         
         # store the list in the self.partition attribute
         self.partition = student_partition_list
-
+        
         return self.partition
 
     def return_fitness(self):
