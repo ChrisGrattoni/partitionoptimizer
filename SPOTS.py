@@ -1,7 +1,7 @@
 """
 Name: Student Partition Optimization Tool for Schools (SPOTS)
 
-Version: 1.0.0a2
+Version: 1.0.0a3
 
 Summary: Optimize a student partition (usually assigning each student to A/B/C/D) to facilitate physical distancing in classrooms
 
@@ -52,36 +52,40 @@ HALF_CLASS_MAXIMUM = 15
 # max size of a partition when dividing students into four subgroups (default = 9)
 QUARTER_CLASS_MAXIMUM = 9
 
-# recommended range: between 0.01 and 0.05, (default = 0.015)
+# recommended range: between 0.01 and 0.05 (default = 0.015)
 MUTATION_RATE = 0.015 
 
-# recommended range: between 100 and 1,000, (default = 200)
+# recommended range: between 100 and 1,000 (default = 200)
 POPULATION_SIZE = 200 
 
 # recommended range: at least 10,000 (default = 100000)
 NUMBER_OF_GENERATIONS = 100000 
 
-# location of input .csv file, (example: "C:\\Users\\jsmith\\Desktop\\")
-IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\" 
+# time measured in minutes (default = 480 min or 8 hr)
+TIME_LIMIT = 60*8
 
-# filename of .csv file with student schedule data (default = "example.csv) 
-INPUT_CSV_FILENAME = "example.csv" 
+# location of input .csv file (example: "C:\\Users\\jsmith\\Desktop\\")
+IO_DIRECTORY = "C:\\Users\\jsmith\\Documents\\GitHub\\partitionoptimizer\\" 
+
+# filename of .csv file with student schedule data (default = "example_student_data.csv) 
+INPUT_CSV_FILENAME = "example_student_data.csv" 
 INPUT_CSV_FILENAME = IO_DIRECTORY + INPUT_CSV_FILENAME
 
-# filename of .csv file with required student subgrouping data (default = "example_subgroups.csv") 
-REQUIRED_SUBGROUP_CSV_FILENAME = None #"example_subgroups_v2.csv" 
+# filename of .csv file with required student subgrouping data 
+# example data = "example_subgroups.csv"
+# if not applicable, use None
+REQUIRED_SUBGROUP_CSV_FILENAME = None # also try "example_subgroups.csv" 
 
 if REQUIRED_SUBGROUP_CSV_FILENAME is not None:
     REQUIRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + REQUIRED_SUBGROUP_CSV_FILENAME
 
 # filename of .csv file with preferred student subgrouping data (default = None) 
-PREFERRED_SUBGROUP_CSV_FILENAME = None
+# example data = "example_subgroups.csv"
+# if not applicable, use None
+PREFERRED_SUBGROUP_CSV_FILENAME = None # also try "example_subgroups.csv" 
 
 if PREFERRED_SUBGROUP_CSV_FILENAME is not None:
     PREFERRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + PREFERRED_SUBGROUP_CSV_FILENAME
-
-# time measured in minutes (default = 480 min or 8 hr)
-TIME_LIMIT = 60*8 
 
 # REQUEST FOR USERS
 #
@@ -1920,7 +1924,7 @@ def run_loop(student_csv_path, required_subgroups_csv_path, preferred_subgroups_
 
         # Uncomment below to track how long this took:
         # (This is the general case WITHOUT initial CSV load)
-        print("Benchmark result = " + str(end_timer - start_timer))
+        # print("Benchmark result = " + str(end_timer - start_timer))
         
         progress_string = "Generation = "
         progress_string += str(generation_number)
