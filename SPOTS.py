@@ -1,7 +1,7 @@
 """
 Name: Student Partition Optimization Tool for Schools (SPOTS)
 
-Version: 1.0.0a2
+Version: 1.0.0a3
 
 Summary: Optimize a student partition (usually assigning each student to A/B/C/D) to facilitate physical distancing in classrooms
 
@@ -52,23 +52,40 @@ HALF_CLASS_MAXIMUM = 15
 # max size of a partition when dividing students into four subgroups (default = 9)
 QUARTER_CLASS_MAXIMUM = 9
 
-# recommended range: between 0.01 and 0.05, (default = 0.015)
+# recommended range: between 0.01 and 0.05 (default = 0.015)
 MUTATION_RATE = 0.015 
 
-# recommended range: between 100 and 1,000, (default = 200)
+# recommended range: between 100 and 1,000 (default = 200)
 POPULATION_SIZE = 200 
 
 # recommended range: at least 10,000 (default = 100000)
 NUMBER_OF_GENERATIONS = 100000 
 
-# location of input .csv file, (example: "C:\\Users\\jsmith\\Desktop\\")
-IO_DIRECTORY = "C:\\Users\\jsmith\\Desktop\\" 
-
-# filename of .csv file (default = "example.csv)
-INPUT_CSV_FILENAME = "example.csv" 
-
 # time measured in minutes (default = 480 min or 8 hr)
-TIME_LIMIT = 60*8 
+TIME_LIMIT = 60*8
+
+# location of input .csv file (example: "C:\\Users\\jsmith\\Desktop\\")
+IO_DIRECTORY = "C:\\Users\\jsmith\\Documents\\GitHub\\partitionoptimizer\\" 
+
+# filename of .csv file with student schedule data (default = "example_student_data.csv) 
+INPUT_CSV_FILENAME = "example_student_data.csv" 
+INPUT_CSV_FILENAME = IO_DIRECTORY + INPUT_CSV_FILENAME
+
+# filename of .csv file with required student subgrouping data 
+# example data = "example_subgroups.csv"
+# if not applicable, use None
+REQUIRED_SUBGROUP_CSV_FILENAME = None # also try "example_subgroups.csv" 
+
+if REQUIRED_SUBGROUP_CSV_FILENAME is not None:
+    REQUIRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + REQUIRED_SUBGROUP_CSV_FILENAME
+
+# filename of .csv file with preferred student subgrouping data (default = None) 
+# example data = "example_subgroups.csv"
+# if not applicable, use None
+PREFERRED_SUBGROUP_CSV_FILENAME = None # also try "example_subgroups.csv" 
+
+if PREFERRED_SUBGROUP_CSV_FILENAME is not None:
+    PREFERRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + PREFERRED_SUBGROUP_CSV_FILENAME
 
 # REQUEST FOR USERS
 #
@@ -196,22 +213,40 @@ class Schedule:
         into four subgroups of roughly equal size
         (default value is 9)
     student_list : list
-        a list of tuples in the form (student_object, schedule_list) 
-        student_object: an object representing a single student
-        student_schedule: a list of course objects that the student 
-        is enrolled in
+        an ordered list of student objects, where each student object
+        represents a single student at the school
+    student_dict : dict
+        key: a student ID number (a unique identifier for a student)
+        value: the associated student object
     course_dict : dict
         key: a course object
         value: a course roster (a list of student objects enrolled 
         in the course)
+    required_subgroups_list : list
+        a list of tuples, where each tuple is a subgroup of students
+        that must be assigned to the same letter group
+        
+        example: here is a list where students 1/2/3 must be assigned 
+        to the same letter, students 3/4 must be assigned to the same 
+        letter, and student6 is in a subgroup by him/herself:
+        
+        [(student1, student2, student3), (student4, student5), (student6)]
+        
+    preferred_subgroups_list : list
+        a list in the same form as required_subgroups_list, but subgroups
+        are not required by the algorithm 
+        (instead, this will be encouraged by the fitness function)
             
     Methods
     -------
     students_from_csv(file_location)
         populates student_list and course_dict from a .csv file
+    subgroups_from_csv(file_location, required_or_preferred)
+        populates required_subgroups_list and/or preferred_subgroups from
+        a .csv file        
     load_partition(letter_list)
         load a list of letter assignments into the letter attribute
-        for each student object in Schedule.student_list
+        for each subgroup of student objects in Schedule.required_subgroups_list
     write_student_assignments()
         write a report of final student assignments in .csv format
     write_course_analysis()
@@ -260,8 +295,241 @@ class Schedule:
         # before Python 3.7, dictionary order was not guaranteed
         #
         self.student_list = []
+        self.student_dict = None
         self.course_dict = {}
+        
+        self.required_subgroups_list = None
+        self.preferred_subgroups_list = None        
 
+    def subgroups_from_csv(self, file_location, required_or_preferred):
+        """
+        A method to populate required_subgroups_list and preferred_subgroups_list
+        from a .csv file
+        
+        The .csv file should have two columns, each representing a pairing:
+
+        ID Num 1, ID Num 2
+        09281381, 20383882
+        42074738, 87172918
+        09281381, 63471199
+        87172918, 42074738
+        87172918, 59283715
+        
+        Suppose most ID numbers correspond to a Student object:
+        
+        student1.id = '09281381'
+        student2.id = '20383882'
+        student3.id = '42074738'
+        student4.id = '87172918'
+        student5.id = '63471199'
+        
+        For this example, suppose that '59283715' is an invalid ID number, and has
+        no student associated to it. 
+        
+        Here is how this method will parse this list of pairings: 
+        
+        Look at the first row "09281381, 20383882". This row indicates that 
+        student1 and student2 are part of a subgroup. Append these:
+        
+        temp_subgroups_list = [[student1, student2]]
+        
+        The second row indicates that student3 and student 4 are in a 
+        subgroup, so update the list as follows:
+        
+        temp_subgroups_list = [[student1, student2], [student3, student4]]
+        
+        The third row indicates that student5 should be added to the subgroup
+        containing student1: 
+        
+        temp_subgroups_list = [[student1, student2, student5], [student3, student4]]
+
+        The fourth row is superfluous since student3 and student4 are already in
+        a subgroup, so no action is taken.
+        
+        The fifth row pairs student4 with a non-existent student, so no action
+        is taken. 
+        
+        Next, convert our nested list into a list of tuples:
+        
+        temp_subgroups_list = [(student1, student2, student5), (student3, student4)]
+   
+        Finally, we check student_list against temp_subgroups_list. Each student
+        in student_list that is not in temp_subgroups_list represents a subgroup
+        of size 1. We append these to temp_subgroups_list. For example, suppose 
+        we have the following: 
+        
+        student_list = [student1, student2, student3, student4, student5, student6]
+        
+        Then we write the following: 
+        
+        temp_subgroups_list = [(student1, student2, student5), (student3, student4), (student5), (student6)]
+        
+        If required_or_preferred = "required", we assign self.required_subgroups_list = temp_subgroups_list
+        
+        If required_or_preferred = "preferred", we assign self.preferred_subgroups_list = temp_subgroups_list
+        
+        Parameters
+        ----------
+        csv_file_location : str
+            the file path of a .csv file with student pairing data, for 
+            example C:\\Users\\jsmith\\student_pairings.csv
+        """
+        
+        # we only want to do something if file_location 
+        # is not set to "None":
+        
+        # if file_location is None and require_or_preferred = "required"
+        # then all of our subgroups are of size 1 (each student comprises
+        # their own subgroup):
+        if file_location is None and required_or_preferred == "required":
+            # our required_subgroups_list is a list of tuples each 
+            # containing a single Student object, which is represented
+            # as a tuple with a trailing comma:
+            self.required_subgroups_list = [(student,) for student in self.student_list] 
+
+        # otherwise, if there is a file to read:
+        elif file_location is not None:
+            # import the .csv:
+            with open(file_location, mode='r') as infile:
+                
+                # a place to store subgroups
+                temp_subgroups_list = []
+                
+                # read the .csv file            
+                reader = csv.reader(infile)
+                
+                # skip the first row since the first row contains headers
+                next(reader) 
+                
+                # description of the columns in the .csv file:
+                for row in reader:
+                    # row[0] : First student ID number
+                    first_id = row[0]
+                    
+                    # row[1] : Second student ID number
+                    second_id = row[1]
+                    
+                    # check if both student ID numbers are valid by checking
+                    # if the ID numbers are keys in self.student_dict:
+                    if first_id in self.student_dict and second_id in self.student_dict:
+                        # if they are, then store the Student objects:
+                        student_obj1 = self.student_dict[first_id]
+                        student_obj2 = self.student_dict[second_id]
+                        
+                        # if temp_subgroups_list is empty, then we have our first subgroup,
+                        # which we store as [[student_obj1, student_obj2]]
+                        if len(temp_subgroups_list) == 0:
+                            temp_subgroups_list.append([student_obj1, student_obj2])
+                        # otherwise, we need to check whether we have to append to 
+                        # an existing subgroup or create a new one:
+                        else: 
+                            
+                            # use found_flag to track if we have found a subgroup 
+                            # containing student_obj1 or student_obj2:
+                            found_flag = False
+                            
+                            # for each existing subgroup
+                            for subgroup in temp_subgroups_list:
+                                # if both student objects are in the subgroup, then we 
+                                # are done with these two student objects 
+                                if student_obj1 in subgroup and student_obj2 in subgroup:
+                                    # set found_flag to True to indicate that we have managed
+                                    # to verify that our students are already in a subgroup
+                                    found_flag = True
+                                    
+                                    # at this point, there is no reason to continue with the current
+                                    # loop so we break:
+                                    break                                    
+                                    
+                                # if student_obj1 is in the subgroup, but student_obj2 is not, 
+                                # then add student_obj2 to the subgroup:                                    
+                                elif student_obj1 in subgroup and student_obj2 not in subgroup:
+                                    subgroup.append(student_obj2)
+                                    
+                                    # set found_flag to True to indicate that we have managed
+                                    # to fit our students into a subgroup
+                                    found_flag = True
+                                    
+                                    # at this point, there is no reason to continue with the current
+                                    # loop so we break:
+                                    break
+                                    
+                                # similarly, if student_obj1 is NOT in the subgroup but 
+                                # student_obj2 is, then add student_obj1 to the subgroup:                            
+                                elif student_obj1 not in subgroup and student_obj2 in subgroup:
+                                    subgroup.append(student_obj1)
+                                    
+                                    # set found_flag to True to indicate that we have managed
+                                    # to fit our students into a subgroup
+                                    found_flag = True
+                                    
+                                    # at this point, there is no reason to continue with the current
+                                    # loop so we break:
+                                    break                                
+                            
+                            # if the above for loop completes without finding a subgroup, then
+                            # found_flag will remain False and we also know the following: 
+                            #
+                            # 1. student_obj1 and student_obj2 are valid students
+                            # 2. these students are not a part of any existing subgroup
+                            #
+                            # in this case we create a new subgroup with the student objects
+                            if found_flag is not True:
+                                temp_subgroups_list.append([student_obj1, student_obj2])
+                
+                # once we have completed this for every row of the .csv, we have successfully
+                # populated temp_subgroups_list with every student subgroup of size > 1
+                
+                # since we are done appending to subgroups, convert to a list of tuples:            
+                temp_subgroups_list = [tuple(subgroup) for subgroup in temp_subgroups_list]
+               
+                # finally, each Student object that is in student_list but does not 
+                # currently appear in a subgroup is actually a subgroup of length 1
+                #
+                # we need to add these to temp_subgroups_list:
+                
+                # for each Student_object in self.student_list
+                for student_obj in self.student_list:
+                    
+                    # a flag to indicate that we have not found 
+                    # the student in a subgroup yet
+                    found_flag = False                   
+                    
+                    # for each existing subgroup:
+                    for subgroup in temp_subgroups_list:                       
+                        
+                        # if the student object is found in the subgroup
+                        if student_obj in subgroup:
+                            
+                            # then the student has been found
+                            found_flag = True
+                            
+                            # and we can break out of the loop
+                            break
+                        # if we reach subgroups of length 1
+                        elif len(subgroup) == 1:
+                            # then we can stop our search because we 
+                            # know that student_obj needs to be added
+                            # to temp_subgroups_list as a subgroup of 
+                            # length 1
+                            break
+                            
+                    # if we have not found the flag ("not found_flag" evaluates to True)
+                    if found_flag is not True:
+                        # then append the student to temp_subgroups_list as a subgroup
+                        # of length 1:
+                        temp_subgroups_list.append((student_obj,)) # singleton tuple needs a trailing comma
+                
+                # now temp_subbroups_list is fully populated, 
+                # so we assign it to the appropriate attribute:
+                if required_or_preferred == "required":
+                    self.required_subgroups_list = temp_subgroups_list
+                elif required_or_preferred == "preferred":
+                    self.preferred_subgroups_list = temp_subgroups_list
+                else: 
+                    raise NameError('Subgroups must either be "required" or "preferred"')
+                
+                    
     def students_from_csv(self, file_location):
         """
         A method to populate student_list and course_dict from a .csv file
@@ -304,10 +572,10 @@ class Schedule:
             temp_course_dict = {}
             
             # each student is uniquely identified by their ID number
-            # temp_student_dict is a dictionary with the following:
+            # self.student_dict is a dictionary with the following:
             # key: ID number
             # value: associated Student object
-            temp_student_dict = {}
+            self.student_dict = {}
             
             # read the .csv file            
             # note: reader method ended up being faster than csv.DictReader objects
@@ -355,9 +623,9 @@ class Schedule:
 
                 # first, set current_student to an appropriate Student object:
                 
-                # check if student_id is NOT in our temp_student_dict
-                if student_id not in temp_student_dict:
-                    # if the student is not in temp_student_dict,
+                # check if student_id is NOT in our self.student_dict
+                if student_id not in self.student_dict:
+                    # if the student is not in self.student_dict,
                     # then instantiate a Student object and assign 
                     # it to current_student:
                     current_student = Student(student_id)
@@ -365,15 +633,15 @@ class Schedule:
                     current_student.middle_name = middle_name
                     current_student.first_name = first_name
 
-                    # next, add to temp_student_dict using:
+                    # next, add to self.student_dict using:
                     # key: student_id 
                     # value: Student object
-                    temp_student_dict[student_id] = current_student                    
+                    self.student_dict[student_id] = current_student                    
                     
-                # otherwise, student_id **is** in our temp_student_dict:
+                # otherwise, student_id **is** in our self.student_dict:
                 else:
                     # access this Student object and assign it to current_student:
-                    current_student = temp_student_dict[student_id]
+                    current_student = self.student_dict[student_id]
 
                 # now current_student is assigned, but the Student object
                 # does not yet have its associated Course object appended
@@ -432,7 +700,7 @@ class Schedule:
                 new_value = new_key.roster
                 self.course_dict[new_key] = new_value
 
-            # now that temp_student_dict has a unique key for each 
+            # now that self.student_dict has a unique key for each 
             # student, we can iterate over the dictionary to populate
             # our student_list with tuples in the form (student, schedule):
             # student: a Student object 
@@ -440,23 +708,23 @@ class Schedule:
             # schedule: a list of Course objects the student is taking 
             #       (aka: a course schedule)    
             
-            for key in temp_student_dict:
-                student_obj = temp_student_dict[key]
+            for key in self.student_dict:
+                student_obj = self.student_dict[key]
                 schedule = student_obj.schedule
-                self.student_list.append((student_obj, schedule))
+                self.student_list.append(student_obj)
 
     def load_partition(self, letter_list):
         """
         A method to load a list of letters into the letter attribute for 
         each student object in Schedule.student_list
         
-        For example, suppose letter_list = ["A", "B", "A", "D"]. Also suppose that 
-        student_list = [student_obj1, student_obj2, student_obj3, student_obj4].
+        For example, suppose letter_list = ["A", "B", "D"]. Also suppose that 
+        required_subgroups_list = [(student_obj1, student_obj2), (student_obj3,), (student_obj4,)].
         Then Schedule.load_partition(letter_list) would lead to the following result:
         
         student_obj1.letter = "A"
-        student_obj2.letter = "B"
-        student_obj3.letter = "A"
+        student_obj2.letter = "A"
+        student_obj3.letter = "B"
         student_obj4.letter = "D"
         
         This method is used when we need to evaluate the fitness of a newly-generated partition.
@@ -464,15 +732,21 @@ class Schedule:
         Parameters
         ----------
         letter_list : list
-            a list of letter assignments for each student at the school, for example a school with
-            four students could have ["A", "B", "A", "D"]
+            a list of letter assignments for each subgroup at the school, for example a school with
+            four subgroups could have ["A", "B", "A", "D"]
         """
+
         number_of_partitions = self.number_of_partitions
         
         for i in range(len(letter_list)):
             letter = letter_list[i]
-            student = self.student_list[i][0]
-            student.letter = letter
+            
+            # get the subgroup from the list
+            student_subgroup = self.required_subgroups_list[i]
+            
+            # assign the same letter to every student in the subgroup
+            for student in student_subgroup:
+                student.letter = letter
 
     def write_student_assignments(self):
         """
@@ -497,8 +771,7 @@ class Schedule:
             file.write("\n")   
             
             # write a line in the .csv for each student in student_list:
-            for tuple in self.student_list: 
-                student_obj = tuple[0]
+            for student_obj in self.student_list:
                 current_id = student_obj.id
                 current_last = student_obj.last_name
                 current_first = student_obj.first_name
@@ -511,6 +784,20 @@ class Schedule:
                 
                 file.write("\n")
 
+    # TO DO: UPDATE THIS ANALYSIS TO AGREE WITH THE FITNESS FUNCTION
+    # THE NEW FITNESS FUNCTION COUNTS MORE SECTIONS AS "IN COMPLIANCE",
+    # WHICH EITHER NEEDS TO BE CHANGED BACK OR INCORPORATED INTO THIS
+    # ANALYSIS SO THAT THE RESULTS ARE CONSISTENT
+    
+    # TO DO: UPDATE CODE BELOW TO EMULATE @jmoon81's CHANGES TO THE 
+    # FITNESS FUNCTION. FOR EXAMPLE, DO NOT USE THE FOLLOWING: 
+    # possible_letter_list = [chr(i + 65) for i in range(0, self.number_of_partitions)]
+    # THIS IS BECAUSE HE ALREADY HARD CODED THE FOLLOWING: 
+    # if NUMBER_OF_PARTITIONS == 2:
+    #   STUDENT_LETTER_LIST = ["A", "B"]
+    # elif NUMBER_OF_PARTITIONS == 4:
+    #   STUDENT_LETTER_LIST = ["A", "B", "C", "D"]
+    
     def write_course_analysis(self):
         """
         A method to write an report of the letter breakdown in each classroom
@@ -651,12 +938,16 @@ class Schedule:
                         # of the four groups:
                         
                         qcm = self.quarter_class_maximum 
-                        check_individually = (a_count <= qcm and b_count <= qcm and c_count <= qcm and d_count <= qcm)
+                        check_individually = (a_count <= qcm 
+                                            and b_count <= qcm 
+                                            and c_count <= qcm 
+                                            and d_count <= qcm)
                         
                         # we also require that the (A+B) and (C+D) combined 
                         # groups are no more than self.half_class_maximum students
                         # (default value 15):                        
-                        check_pairs = (a_count + b_count <= self.half_class_maximum and c_count + d_count <= self.half_class_maximum)
+                        check_pairs = (a_count + b_count <= self.half_class_maximum 
+                                    and c_count + d_count <= self.half_class_maximum)
                         
                         # if the course passes both tests, it is "In Compliance"
                         if check_individually and check_pairs:
@@ -760,7 +1051,17 @@ class Schedule:
                 # if it has no more than self.half_class_maximum
                 # A's and self.half_class_maximum B's (default 
                 # value is 15):
-                if a_count <= self.half_class_maximum and b_count <= self.half_class_maximum:
+                hcm = self.half_class_maximum
+                
+                # our tolerance for applying a penalty based on the 
+                # the ratio of A to B groups (usually set to 55%) 
+                # 
+                # for a small class, 55% might not be feasible, so we set
+                # it to (total/2 + 1)/total instead
+                #                
+                pairwise_tolerance = max([0.55, (total/2+1)/total])
+                
+                if a_count <= hcm and b_count <= hcm:
                     # increment the raw "In Compliance" score:
                     good_score += 1 
                     # increment the weighted_fitness_score
@@ -770,10 +1071,10 @@ class Schedule:
                     weighted_fitness_score += 100/number_of_courses 
                 # otherwise, apply a penalty based on how far the course
                 # deviates from a 50/50 split betwen A's and B':
-                elif a_count <= self.half_class_maximum and b_count > self.half_class_maximum:
+                elif a_count <= hcm and b_count > hcm:
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
-                elif a_count > self.half_class_maximum and b_count <= self.half_class_maximum:
+                elif a_count > hcm and b_count <= hcm:
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
                 # If we make it here, a_count and b_count are 
@@ -784,13 +1085,14 @@ class Schedule:
                 # b_count <= self.half_class_maximum 
                 # at the same time. 
                 # Instead we try to make sure that the relative
-                # ratio between A's and B's is better than a 55/45 split:
-                elif a_percent > 0.55: # this tolerance can be modified 
+                # ratio between A's and B's is better than a 
+                # pairwise_tolerance split:
+                elif a_percent > pairwise_tolerance:
                     # penalize if the section deviates from a 
-                    # 55/45 split between A/B
+                    # pairwise_tolerance split between A/B
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
-                elif b_percent > 0.55: # this tolerance can be modified
+                elif b_percent > pairwise_tolerance: 
                     weighted_fitness_score -= percent_difference
                     penalty_count += 1
                 else:
@@ -824,12 +1126,14 @@ class Schedule:
                 
                 # the total number of students on the roster:
                 total = len(roster)
-                
-                
+                                
                 # check if there are no more than self.quarter_class_maximum
                 # (9) students of any letter:
                 qcm = self.quarter_class_maximum
-                check_individually = (a_count <= qcm and b_count <= qcm and c_count <= qcm and d_count <= qcm)
+                check_individually = (a_count <= qcm 
+                                    and b_count <= qcm 
+                                    and c_count <= qcm 
+                                    and d_count <= qcm)
                 
                 # check if the (A+B) count and (C+D) count are each less
                 # than self.half_class_maximum students (default value is 15):
@@ -860,9 +1164,9 @@ class Schedule:
                     # 
                     # decrease to emphasize "In Compliance" courses
                     #
-                    # default value of pairwise_multiplier = 0.5
+                    # default value of pairwise_multiplier = 0.3
                     #
-                    pairwise_multiplier = 0.5
+                    pairwise_multiplier = 0.3
                     
                     # individual_multiplier
                     #
@@ -883,45 +1187,108 @@ class Schedule:
                     c_percent = c_count/total
                     d_percent = d_count/total
 
+                    # our tolerance for applying a penalty based on the 
+                    # relative size of the (A + B) or (C + D) groups, 
+                    # which is usually going to be set to 55%
+                    # 
+                    # for a small class, 55% might not be feasible, so we set
+                    # it to (total/2 + 1)/total instead
+                    #
+                    pairwise_tolerance = max([0.55, (total/2+1)/total])
 
-                    if a_percent + b_percent > 0.55:
+                    if a_percent + b_percent > pairwise_tolerance:
                         # see note above about pairwise_multiplier
                         weighted_fitness_score -= pairwise_multiplier*(a_percent + b_percent - 0.5)
                         penalty_count += 1
                     # subtract from weighted_fitness_score if c_percent + d_percent
-                    # is over 55% of the roster:
-                    elif c_percent + d_percent > 0.55:
+                    # exceeds the value of pairwise_tolerance:
+                    elif c_percent + d_percent > pairwise_tolerance:
                         # see note above about pairwise_multiplier
                         weighted_fitness_score -= pairwise_multiplier*(c_percent + d_percent - 0.5)
                         penalty_count += 1
 
-                    # subtract from weighted_fitness_score if a_percent exceeds 30% of the roster:
-                    if a_percent > 0.3:
+                    # our tolerance for applying a penalty based on the 
+                    # relative size of any individual A/B/C/D group
+                    # which is usually going to be set to 30%
+                    # 
+                    # for a small class, 30% might not be feasible, so we set
+                    # it to (total/4 + 1)/total instead
+                    #
+                    individual_tolerance = max([0.3, (total/4+1)/total])
+
+                    # subtract from weighted_fitness_score if a_percent exceeds the value of individual_tolerance:
+                    if a_percent > individual_tolerance:
                         # see note above about individual_multiplier
                         weighted_fitness_score -= individual_multiplier*(a_percent - 0.25)
                         penalty_count += 1
                     # subtract from weighted_fitness_score if b_percent exceeds 30% of the roster:
-                    if b_percent > 0.3:
+                    if b_percent > individual_tolerance:
                         # see note above about individual_multiplier
                         weighted_fitness_score -= individual_multiplier*(b_percent - 0.25)
                         penalty_count += 1
                     # subtract from weighted_fitness_score if c_percent exceeds 30% of the roster:
-                    if c_percent > 0.3:
+                    if c_percent > individual_tolerance:
                         # see note above about individual_multiplier
                         weighted_fitness_score -= individual_multiplier*(c_percent - 0.25)
                         penalty_count += 1
                     # subtract from weighted_fitness_score if d_percent exceeds 30% of the roster:
-                    if d_percent > 0.3:
+                    if d_percent > individual_tolerance:
                         # see note above about individual_multiplier
                         weighted_fitness_score -= individual_multiplier*(d_percent - 0.25)
                         penalty_count += 1
                    
                     # an "Out of Compliance" section for which no penalty was applied:                    
-                    if (a_percent <= 0.3 and b_percent <= 0.3 and c_percent <= 0.3 and d_percent <= 0.3) and (a_percent + b_percent <= 0.55 and (c_percent + d_percent) <= 0.55):
-                        other_score += 1        
+                    
+                    all_individually = (a_percent <= individual_tolerance
+                                        and b_percent <= individual_tolerance 
+                                        and c_percent <= individual_tolerance 
+                                        and d_percent <= individual_tolerance)
+                   
+                    all_pairwise = (a_percent + b_percent <= pairwise_tolerance
+                              and (c_percent + d_percent) <= pairwise_tolerance)
+                    
+                    if all_individually and all_pairwise:
+                        if total > 2*hcm:
+                            # this is a course that is too big to ever be 
+                            # "In Compliance" above, but we have at least 
+                            # partitioned it evenly, so we count it as good:
+                            weighted_fitness_score += 100/number_of_courses
+                            
+                            # TO DO: DEBATE WHETHER INCREMENTING HERE IS GOOD
+                            # PRACTICE. THIS COURSE IS 'AS GOOD AS IT CAN GET'
+                            # IN A SENSE BECAUSE IT CAN NEVER SATISFY THE 
+                            # REQUIREMENT SET BY self.half_class_maximum
+                            good_score += 1
+                        else:
+                            # this should catch any cases that have been missed above 
+                            other_score += 1
+                            
         else:
             print("In order to choose something other than an AB or ABCD partition, you must add your own fitness function")    
             raise NotImplementedError
+        
+        if self.preferred_subgroups_list is not None:
+            number_of_subgroups = len(self.preferred_subgroups_list)
+            
+            for subgroup in self.preferred_subgroups_list:
+                subgroup_letter_set = {}
+                
+                for student in subgroup:
+                    subgroup_letter_set.add(student.letter)
+                    
+                if len(subgroup_letter_set) > 1:
+                    # TO DO: DISCUSS THE BEST APPROACH FOR PENALIZING
+                    # VIOLATIONS OF PREFERRED_SUBGROUPS AND HOW TO APPLY
+                    # THE PENALTY
+                    #
+                    # SHOULD THE PENALTY BASED ON HOW SEVERE THE VIOLATION IS
+                    # OR SIMPLY A RECOGNITION OF THE FACT THAT THE SUBGROUP
+                    # IS NOT ASSIGNED TO THE SAME LETTER?
+                    #
+                    # IF THE SIZE OF THE VIOLATION MATTERS, THEN WE SHOULD USE 
+                    # subgroup_letter_list = [] INSTEAD OF SETS
+                    # AND subgroup_letter_list.append(student.letter) INSTEAD OF .add
+                    weighted_fitness_score -= 100/number_of_subgroups
         
         # return the following tuple, where weighted_fitness_score is the value 
         # we are trying to minimize and good_score is the number of courses that 
@@ -945,8 +1312,7 @@ class Schedule:
             a student's ID number
         """
 
-        for tuple in self.student_list:
-            student = tuple[0]
+        for student in self.student_list:
             if student.id == student_id:
                 student_letter_name = "Group: " + student.letter + ", Name: " + student.last_name + ", " + student.first_name
                 current_classes = tuple[1]
@@ -979,8 +1345,8 @@ class Schedule:
 
 class IndividualPartition(Schedule):
     """
-    A class used to store an individual partition of the student
-    body as an ordered list of letter assignments
+    A class used to store an individual partition of student
+    subgroups as an ordered list of letter assignments
     
     Ex: ["A", "A", "C", "B", "D", "A", ...]
     
@@ -993,7 +1359,7 @@ class IndividualPartition(Schedule):
         inherited from the schedule class
         
     partition : list
-        an individual partition of the student body stored as a 
+        an individual partition of student subgroups stored as a 
         list of letters, ex: ["A", "A", "C", "B", "D", "A", ...]
         
     fitness: tuple
@@ -1038,17 +1404,17 @@ class IndividualPartition(Schedule):
         
         student_partition_list = []
     
-        # use number_of_students to determine how many letters are needed
-        number_of_students = len(self.schedule_obj.student_list)
+        # use number_of_subgroups to determine how many letters are needed
+        number_of_subgroups = len(self.schedule_obj.required_subgroups_list)
 
         # populate the list, ex: ["A", "A", "C", "B", "D", "A", ...] 
-        for _ in range(number_of_students):
+        for _ in range(number_of_subgroups):
             letter = random.choice(STUDENT_LETTER_LIST)
             student_partition_list.append(letter)        
         
         # store the list in the self.partition attribute
         self.partition = student_partition_list
-
+        
         return self.partition
 
     def return_fitness(self):
@@ -1439,14 +1805,18 @@ class GeneticAlgorithm(Population):
         
         return self.population_obj.sorted_scored_population
 
-def run_loop(path, number_of_partitions, half_class_maximum, quarter_class_maximum, pop_size, rate_of_mutation, max_gen, max_time):
+def run_loop(student_csv_path, required_subgroups_csv_path, preferred_subgroups_csv_path, number_of_partitions, half_class_maximum, quarter_class_maximum, pop_size, rate_of_mutation, max_gen, max_time):
     """
     Repeat the Genetic Algorithm based on a specified number of generations (or time limit)
                 
     Parameters
     ----------
-    path : str
-        the location of the input.csv
+    student_csv_path : str
+        the location of the input.csv with student schedule data
+    required_subgroups_csv_path : str
+        the location of the input.csv with required subgrouping data
+    preferred_subgroups_csv_path : str
+        the location of the input.csv with preferred subgrouping data
     number_of_partitions: int
         the number of partitions to group students into
         2 for an A/B partition
@@ -1482,7 +1852,13 @@ def run_loop(path, number_of_partitions, half_class_maximum, quarter_class_maxim
     load_schedule = Schedule(number_of_partitions, half_class_maximum, quarter_class_maximum)
     
     # load school data into the Schedule object
-    load_schedule.students_from_csv(path)
+    load_schedule.students_from_csv(student_csv_path)
+    
+    # load required subgroups into the Schedule object
+    load_schedule.subgroups_from_csv(required_subgroups_csv_path, "required")    
+    
+    # load preferred subgroups into the Schedule object
+    load_schedule.subgroups_from_csv(preferred_subgroups_csv_path, "preferred")
     
     # instantiate the IndividualPartition object
     first_partition = IndividualPartition(load_schedule)
@@ -1548,7 +1924,7 @@ def run_loop(path, number_of_partitions, half_class_maximum, quarter_class_maxim
 
         # Uncomment below to track how long this took:
         # (This is the general case WITHOUT initial CSV load)
-        print("Benchmark result = " + str(end_timer - start_timer))
+        # print("Benchmark result = " + str(end_timer - start_timer))
         
         progress_string = "Generation = "
         progress_string += str(generation_number)
@@ -1597,7 +1973,7 @@ def run_loop(path, number_of_partitions, half_class_maximum, quarter_class_maxim
 
 # a possible target for using the multiprocessing module:     
 def main():
-    run_loop(IO_DIRECTORY + INPUT_CSV_FILENAME, NUMBER_OF_PARTITIONS, HALF_CLASS_MAXIMUM, QUARTER_CLASS_MAXIMUM, POPULATION_SIZE, MUTATION_RATE, NUMBER_OF_GENERATIONS, TIME_LIMIT)
+    run_loop(INPUT_CSV_FILENAME, REQUIRED_SUBGROUP_CSV_FILENAME, PREFERRED_SUBGROUP_CSV_FILENAME, NUMBER_OF_PARTITIONS, HALF_CLASS_MAXIMUM, QUARTER_CLASS_MAXIMUM, POPULATION_SIZE, MUTATION_RATE, NUMBER_OF_GENERATIONS, TIME_LIMIT)
 
 if __name__ == "__main__":
     main()
