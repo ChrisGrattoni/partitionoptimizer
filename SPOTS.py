@@ -63,10 +63,10 @@ MUTATION_RATE = 0.015
 POPULATION_SIZE = 40
 
 # recommended range: ???
-NUMBER_OF_ERAS = 1000
+NUMBER_OF_ERAS = 10000
 
 # recommended range: at least 10,000 (default = 100000)
-NUMBER_OF_GENERATIONS_PER_ERA = 25
+NUMBER_OF_GENERATIONS_PER_ERA = 40
 
 # location of input .csv file, (example: "C:\\Users\\jsmith\\Desktop\\")
 #IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\" 
@@ -2212,7 +2212,7 @@ def get_crossed_children(population1, population2, num_children):
                this happens by selecting a random [relatively small] subset of itself (i.e. a set of indices), and 
                having child1 and child2 swap their letters at these indices.
 
-               the idea is that each parent might have a found a successful schedule of a small "chunk" of students
+               the idea is that each parent might have found a successful schedule of a small "chunk" of students
                that the other parent did not find yet (or was not successful in that overall environment), and this
                is a way to inject those small "local" changes (local in the sense that it is an improvement that can
                be made to a small cohort of students that doesn't really affect those outside of this cohort).
@@ -2236,7 +2236,7 @@ def get_crossed_children(population1, population2, num_children):
         # this is purely based on [what seems right to me] based on some limited experimentation
         # far from finalized, please feel free to play around with the parameters
         # some small number (such as between 10 and 40) seems to work best
-        injection_size = max(random.randint(10,40), genome_length)
+        injection_size = random.randint(10,40)
 
         # choose injection_size random indexes which will get the other parent's genes
         for _ in range(injection_size):
@@ -2427,7 +2427,7 @@ def main():
         # log time elapsed
         end_timer = time.perf_counter()
         total_time += (end_timer - start_timer)
-        print("Just completed era # " + str(era_number) + " in " + str(round(end_timer - start_timer, 3)) + "sec")
+        print("Just completed era #" + str(era_number) + " in " + str(round(end_timer - start_timer, 3)) + "sec")
         print("Total elapsed time: " + str(round(total_time/60, 2)) + " min")
 
 
