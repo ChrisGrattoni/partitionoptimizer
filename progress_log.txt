@@ -1,23 +1,57 @@
-Generation = 1, Fitness = 53.887884292288796, In Compliance = 399 out of 602
-Generation = 2, Fitness = 54.00514457429714, In Compliance = 398 out of 602
-Generation = 3, Fitness = 54.43509218442622, In Compliance = 400 out of 602
-Generation = 4, Fitness = 55.03266294094055, In Compliance = 402 out of 602
-Generation = 5, Fitness = 55.03266294094055, In Compliance = 402 out of 602
-Generation = 6, Fitness = 56.57800439659094, In Compliance = 410 out of 602
-Generation = 7, Fitness = 56.57800439659094, In Compliance = 410 out of 602
-Generation = 8, Fitness = 56.57800439659094, In Compliance = 410 out of 602
-Generation = 9, Fitness = 56.57800439659094, In Compliance = 410 out of 602
-Generation = 10, Fitness = 57.3121041732084, In Compliance = 412 out of 602
-Generation = 11, Fitness = 57.3121041732084, In Compliance = 412 out of 602
-Generation = 12, Fitness = 57.54792804556814, In Compliance = 413 out of 602
-Generation = 13, Fitness = 58.18706672796262, In Compliance = 416 out of 602
-Generation = 14, Fitness = 58.18706672796262, In Compliance = 416 out of 602
-Generation = 15, Fitness = 58.599949048140196, In Compliance = 418 out of 602
-Generation = 16, Fitness = 58.599949048140196, In Compliance = 418 out of 602
-Generation = 17, Fitness = 58.599949048140196, In Compliance = 418 out of 602
-Generation = 18, Fitness = 58.599949048140196, In Compliance = 418 out of 602
-Generation = 19, Fitness = 59.38512922898519, In Compliance = 422 out of 602
-Generation = 20, Fitness = 60.961453038817965, In Compliance = 431 out of 602
-Generation = 21, Fitness = 60.961453038817965, In Compliance = 431 out of 602
-Generation = 22, Fitness = 60.961453038817965, In Compliance = 431 out of 602
-Generation = 23, Fitness = 60.961453038817965, In Compliance = 431 out of 602
+PID[11600]: Generation = 1, Fitness = 64.44465814349786, In Compliance = 441 out of 602, elapsed time so far this era (sec) = 1.329273300000004
+PID[16784]: Generation = 2, Fitness = 65.95676471196563, In Compliance = 446 out of 602, elapsed time so far this era (sec) = 1.991969400000002
+PID[16236]: Generation = 2, Fitness = 67.13359268199335, In Compliance = 453 out of 602, elapsed time so far this era (sec) = 1.9826219999999921
+PID[10464]: Generation = 2, Fitness = 65.93018732839857, In Compliance = 447 out of 602, elapsed time so far this era (sec) = 1.990524200000003
+PID[2792]: Generation = 2, Fitness = 65.87561650487636, In Compliance = 451 out of 602, elapsed time so far this era (sec) = 1.9973673000000005
+PID[19032]: Generation = 2, Fitness = 66.04327251657692, In Compliance = 448 out of 602, elapsed time so far this era (sec) = 2.0207543
+PID[19376]: Generation = 2, Fitness = 65.2846381412501, In Compliance = 444 out of 602, elapsed time so far this era (sec) = 2.0290805000000063
+PID[11600]: Generation = 2, Fitness = 64.58043372148965, In Compliance = 441 out of 602, elapsed time so far this era (sec) = 2.025752000000004
+PID[2900]: Generation = 2, Fitness = 65.75985459111281, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 2.043071099999999
+PID[16236]: Generation = 3, Fitness = 67.13359268199335, In Compliance = 453 out of 602, elapsed time so far this era (sec) = 2.66458819999999
+PID[16784]: Generation = 3, Fitness = 65.95676471196563, In Compliance = 446 out of 602, elapsed time so far this era (sec) = 2.6788706000000033
+PID[10464]: Generation = 3, Fitness = 65.93018732839857, In Compliance = 447 out of 602, elapsed time so far this era (sec) = 2.6910973000000027
+PID[2792]: Generation = 3, Fitness = 65.87561650487636, In Compliance = 451 out of 602, elapsed time so far this era (sec) = 2.6916742999999954
+PID[2900]: Generation = 3, Fitness = 65.75985459111281, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 2.716933999999995
+PID[19376]: Generation = 3, Fitness = 65.56175099997644, In Compliance = 445 out of 602, elapsed time so far this era (sec) = 2.7258555000000015
+PID[11600]: Generation = 3, Fitness = 64.58043372148965, In Compliance = 441 out of 602, elapsed time so far this era (sec) = 2.7123420000000067
+PID[19032]: Generation = 3, Fitness = 66.04327251657692, In Compliance = 448 out of 602, elapsed time so far this era (sec) = 2.7366190999999986
+PID[16236]: Generation = 4, Fitness = 67.13359268199335, In Compliance = 453 out of 602, elapsed time so far this era (sec) = 3.32976399999999
+PID[10464]: Generation = 4, Fitness = 65.93018732839857, In Compliance = 447 out of 602, elapsed time so far this era (sec) = 3.3594025000000087
+PID[2792]: Generation = 4, Fitness = 65.87561650487636, In Compliance = 451 out of 602, elapsed time so far this era (sec) = 3.3511491999999947
+PID[16784]: Generation = 4, Fitness = 65.95676471196563, In Compliance = 446 out of 602, elapsed time so far this era (sec) = 3.361448700000004
+PID[2900]: Generation = 4, Fitness = 65.75985459111281, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 3.3698373000000004
+PID[11600]: Generation = 4, Fitness = 64.58043372148965, In Compliance = 441 out of 602, elapsed time so far this era (sec) = 3.377508000000006
+PID[19376]: Generation = 4, Fitness = 65.56175099997644, In Compliance = 445 out of 602, elapsed time so far this era (sec) = 3.4097302999999997
+PID[19032]: Generation = 4, Fitness = 66.04327251657692, In Compliance = 448 out of 602, elapsed time so far this era (sec) = 3.4091390999999973
+PID[16236]: Generation = 5, Fitness = 67.13359268199335, In Compliance = 453 out of 602, elapsed time so far this era (sec) = 4.0573843999999895
+PID[2792]: Generation = 5, Fitness = 65.87561650487636, In Compliance = 451 out of 602, elapsed time so far this era (sec) = 4.069579199999993
+PID[10464]: Generation = 5, Fitness = 65.93018732839857, In Compliance = 447 out of 602, elapsed time so far this era (sec) = 4.080257700000011
+PID[16784]: Generation = 5, Fitness = 65.95676471196563, In Compliance = 446 out of 602, elapsed time so far this era (sec) = 4.089656400000003
+PID[2900]: Generation = 5, Fitness = 65.75985459111281, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 4.086400300000001
+PID[11600]: Generation = 5, Fitness = 64.58043372148965, In Compliance = 441 out of 602, elapsed time so far this era (sec) = 4.097314300000001
+PID[19376]: Generation = 5, Fitness = 65.56175099997644, In Compliance = 445 out of 602, elapsed time so far this era (sec) = 4.1240847999999986
+PID[19032]: Generation = 5, Fitness = 66.04327251657692, In Compliance = 448 out of 602, elapsed time so far this era (sec) = 4.126118300000002
+PID[16236]: Generation = 6, Fitness = 67.13359268199335, In Compliance = 453 out of 602, elapsed time so far this era (sec) = 4.73492869999999
+PID[10464]: Generation = 6, Fitness = 66.32405029134608, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 4.765041300000014
+PID[2900]: Generation = 6, Fitness = 65.75985459111281, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 4.762904599999999
+PID[2792]: Generation = 6, Fitness = 66.0866012903657, In Compliance = 452 out of 602, elapsed time so far this era (sec) = 4.771197399999991
+PID[19376]: Generation = 6, Fitness = 65.56175099997644, In Compliance = 445 out of 602, elapsed time so far this era (sec) = 4.7995077999999936
+PID[16784]: Generation = 6, Fitness = 65.95676471196563, In Compliance = 446 out of 602, elapsed time so far this era (sec) = 4.812109100000008
+PID[11600]: Generation = 6, Fitness = 64.58043372148965, In Compliance = 441 out of 602, elapsed time so far this era (sec) = 4.804913899999995
+PID[19032]: Generation = 6, Fitness = 66.04327251657692, In Compliance = 448 out of 602, elapsed time so far this era (sec) = 4.814476400000004
+PID[16236]: Generation = 7, Fitness = 67.13359268199335, In Compliance = 453 out of 602, elapsed time so far this era (sec) = 5.401455999999989
+PID[10464]: Generation = 7, Fitness = 66.32405029134608, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 5.435054700000016
+PID[2792]: Generation = 7, Fitness = 66.0866012903657, In Compliance = 452 out of 602, elapsed time so far this era (sec) = 5.4536872999999915
+PID[2900]: Generation = 7, Fitness = 65.75985459111281, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 5.460400199999995
+PID[16784]: Generation = 7, Fitness = 66.23335238240625, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 5.4754370000000065
+PID[11600]: Generation = 7, Fitness = 64.62671495758745, In Compliance = 441 out of 602, elapsed time so far this era (sec) = 5.490088399999998
+PID[19376]: Generation = 7, Fitness = 65.56175099997644, In Compliance = 445 out of 602, elapsed time so far this era (sec) = 5.498997199999998
+PID[19032]: Generation = 7, Fitness = 66.04327251657692, In Compliance = 448 out of 602, elapsed time so far this era (sec) = 5.502875700000004
+PID[16236]: Generation = 8, Fitness = 67.13359268199335, In Compliance = 453 out of 602, elapsed time so far this era (sec) = 6.088331999999987
+PID[10464]: Generation = 8, Fitness = 66.32405029134608, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 6.1486505000000165
+PID[2900]: Generation = 8, Fitness = 65.75985459111281, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 6.157736599999993
+PID[2792]: Generation = 8, Fitness = 66.0866012903657, In Compliance = 452 out of 602, elapsed time so far this era (sec) = 6.168883599999994
+PID[16784]: Generation = 8, Fitness = 66.23335238240625, In Compliance = 449 out of 602, elapsed time so far this era (sec) = 6.202872200000002
+PID[19376]: Generation = 8, Fitness = 65.56175099997644, In Compliance = 445 out of 602, elapsed time so far this era (sec) = 6.2077369000000004
+PID[19032]: Generation = 8, Fitness = 66.04327251657692, In Compliance = 448 out of 602, elapsed time so far this era (sec) = 6.2221361
+PID[11600]: Generation = 8, Fitness = 64.62671495758745, In Compliance = 441 out of 602, elapsed time so far this era (sec) = 6.215674499999999

@@ -47,8 +47,8 @@ if NUMBER_OF_PARTITIONS == 2:
 elif NUMBER_OF_PARTITIONS == 4:
     STUDENT_LETTER_LIST = ["A", "B", "C", "D"]
 
-# number of processes to launch (only 1 and 4 are implemented)
-NUMBER_OF_PROCESSES = 4
+# number of processes to launch
+NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
 
 # max size of a partition when dividing students into two subgroups (default = 15) 
 HALF_CLASS_MAXIMUM = 15 
@@ -69,15 +69,15 @@ NUMBER_OF_ERAS = 10000
 NUMBER_OF_GENERATIONS_PER_ERA = 40
 
 # location of input .csv file, (example: "C:\\Users\\jsmith\\Desktop\\")
-#IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\" 
-IO_DIRECTORY = "" 
+IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\" 
+#IO_DIRECTORY = "" 
 
 # filename of .csv file with student schedule data (default = "example.csv) 
 INPUT_CSV_FILENAME = "example.csv" 
 INPUT_CSV_FILENAME = IO_DIRECTORY + INPUT_CSV_FILENAME
 
 # filename of .csv file with required student subgrouping data (default = "example_subgroups.csv") 
-REQUIRED_SUBGROUP_CSV_FILENAME = None #"example_subgroups_v2.csv" 
+REQUIRED_SUBGROUP_CSV_FILENAME = "example_subgroups_v2.csv" 
 
 if REQUIRED_SUBGROUP_CSV_FILENAME is not None:
     REQUIRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + REQUIRED_SUBGROUP_CSV_FILENAME
@@ -2261,12 +2261,10 @@ def get_crossed_children(population1, population2, num_children):
     return crossed_children_list
 
 
-def crossbreed_islands(island_populations):
+def crossbreed_islands(island_populations, number_of_islands):
     """
     Helper function for crossbreeding across different island populations.
     Returns the list containing the crossbred populations.
-
-    CURRENTLY ONLY IMPLEMENTED FOR 4 PROCESSES
 
     Parameters
     ----------
@@ -2284,60 +2282,57 @@ def crossbreed_islands(island_populations):
 
     """    
     
-    # original populations pre-cross 
-    orig_pop1 = island_populations[0]
-    orig_pop2 = island_populations[1]
-    orig_pop3 = island_populations[2]
-    orig_pop4 = island_populations[3]
-
-
     # each population keeps the top 25% elites
-    num_elites = len(orig_pop1)//4
+    num_elites = len(island_populations[0])//4
 
-    crossed_pop1 = []
-    crossed_pop2 = []
-    crossed_pop3 = []
-    crossed_pop4 = []
+    # an empty list for each of the crossed populations 
+    crossed_populations = [[] for _ in range(number_of_islands)]
     
-    crossed_pop1.extend([item for item in orig_pop1[0:num_elites]])
-    crossed_pop2.extend([item for item in orig_pop2[0:num_elites]])
-    crossed_pop3.extend([item for item in orig_pop3[0:num_elites]])
-    crossed_pop4.extend([item for item in orig_pop4[0:num_elites]])
-
-
-
+    # populate the 25% elites onto each island:
+    for i in range(number_of_islands):
+        crossed_pop = crossed_populations[i]
+        orig_pop = island_populations[i]
+        crossed_pop.extend([item for item in orig_pop[0:num_elites]])
+    
     # for each island population, the remaining 75% is composed of 
-    # [crossing with each of the other three islands for 25% each].
+    # [crossing with each of the other (number_of_islands - 1) islands].
 
-    # divide the remaining number of partitions as evenly as possible into thirds
-    # and call those three numbers num_children1, num_children2, and num_children3
-    num_children_1 = num_children_2 = (len(orig_pop1) - num_elites)//3
-    num_children_3 = len(orig_pop1) - num_elites - num_children_1 - num_children_2
-
-
-    # finish creating crossed_pop1 by taking orig_pop1 and crossing with orig_pop234
-    crossed_pop1.extend(get_crossed_children(orig_pop1, orig_pop2, num_children_1))
-    crossed_pop1.extend(get_crossed_children(orig_pop1, orig_pop3, num_children_2))
-    crossed_pop1.extend(get_crossed_children(orig_pop1, orig_pop4, num_children_3))
-
-    # finish creating crossed_pop2 by taking orig_pop2 and crossing with orig_pop134
-    crossed_pop2.extend(get_crossed_children(orig_pop2, orig_pop1, num_children_1))
-    crossed_pop2.extend(get_crossed_children(orig_pop2, orig_pop3, num_children_2))
-    crossed_pop2.extend(get_crossed_children(orig_pop2, orig_pop4, num_children_3))
-
-    # finish creating crossed_pop3 by taking orig_pop3 and crossing with orig_pop124
-    crossed_pop3.extend(get_crossed_children(orig_pop3, orig_pop1, num_children_1))
-    crossed_pop3.extend(get_crossed_children(orig_pop3, orig_pop2, num_children_2))
-    crossed_pop3.extend(get_crossed_children(orig_pop3, orig_pop4, num_children_3))
-
-    # finish creating crossed_pop4 by taking orig_pop4 and crossing with orig_pop123
-    crossed_pop4.extend(get_crossed_children(orig_pop4, orig_pop1, num_children_1))
-    crossed_pop4.extend(get_crossed_children(orig_pop4, orig_pop2, num_children_2))
-    crossed_pop4.extend(get_crossed_children(orig_pop4, orig_pop3, num_children_3))
+    # divide the remaining number of partitions as evenly as possible into
+    # (1/((number_of_islands - 1)))ths
     
+    # most groups will be of this size:
+    num_children = (len(island_populations[0]) - num_elites)//(number_of_islands - 1)
+    
+    # the last group will be composed of whatever space is left over:
+    remainder = len(island_populations[0]) - num_elites - (num_children)*(number_of_islands - 2)
 
-    # package these 4 crossbred populations into a list and return
-    return (crossed_pop1, crossed_pop2, crossed_pop3, crossed_pop4)
+    # for each island:
+    for i in range(number_of_islands):
+        # the crossed population (that currently only has elites)
+        crossed_pop = crossed_populations[i]
+        
+        # the first population to cross with: 
+        first_pop = island_populations[i]
+        
+        # the indices of the remaining populations to cross with:
+        other_indices = [n for n in range(number_of_islands)]
+        other_indices.remove(i)
+        
+        # for each index (except the last):
+        for index in other_indices[:-1]:
+            # get the second population for crossing
+            second_pop = island_populations[index]
+            
+            # cross the two islands and add the children to cross_pop 
+            # (the number of children added will = num_children)
+            crossed_pop.extend(get_crossed_children(first_pop, second_pop, num_children))
+        
+        # cross with the last island and add the children to cross_pop
+        # (this time, the number of children added will = remainder)
+        crossed_pop.extend(get_crossed_children(first_pop, island_populations[-1], remainder))
+
+    # return the list of crossed populations
+    return crossed_populations
 
 
 
@@ -2411,7 +2406,7 @@ def main():
         # now that we have a population from each island, crossbreed
         # both the input (island_populations) and the output (crossed_populations)
         # is represented as a list of populations
-        crossed_populations = crossbreed_islands(island_populations)
+        crossed_populations = crossbreed_islands(island_populations, NUMBER_OF_PROCESSES)
 
 
         # send this crossed population back to the island process via crossbred_population_queue
