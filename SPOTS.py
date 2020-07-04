@@ -57,20 +57,20 @@ HALF_CLASS_MAXIMUM = 15
 QUARTER_CLASS_MAXIMUM = 9
 
 # recommended range: between 0.01 and 0.05, (default = 0.015)
-MUTATION_RATE = 0.015 
+MUTATION_RATE = 0.025 
 
 # recommended range: between 100 and 1,000, (default = 200)
 POPULATION_SIZE = 40
 
 # recommended range: ???
-NUMBER_OF_ERAS = 10000
+NUMBER_OF_ERAS = 3000
 
 # recommended range: at least 10,000 (default = 100000)
-NUMBER_OF_GENERATIONS_PER_ERA = 40
+NUMBER_OF_GENERATIONS_PER_ERA = 10
 
 # location of input .csv file, (example: "C:\\Users\\jsmith\\Desktop\\")
-IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\" 
-#IO_DIRECTORY = "" 
+#IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\" 
+IO_DIRECTORY = "" 
 
 # filename of .csv file with student schedule data (default = "example.csv) 
 INPUT_CSV_FILENAME = "example.csv" 
@@ -1707,20 +1707,33 @@ class GeneticAlgorithm(Population):
         # the length of the parent lists
         genome_length = len(parent1)
         
-        # determine a random cutpoint 
-        cutpoint = random.randint(1, genome_length - 1)
-        
-        # slice both parents at the cutpoint:
-        parent1_slice1 = parent1[:cutpoint] 
-        parent1_slice2 = parent1[cutpoint:] 
-        
-        parent2_slice1 = parent2[:cutpoint] 
-        parent2_slice2 = parent2[cutpoint:] 
-        
-        # create the children by combining the slices (crossover)
-        child1 = parent1_slice1 + parent2_slice2
-        child2 = parent2_slice1 + parent1_slice2
-        
+
+        """
+        a given pair of parents create 2 new children:
+            1. child1 starts off as a clone of parent1, just as child2 starts off as a clone of parent2.
+            2. these 2 clones then have an opportunity to swap some genes (individual student letter assignments).
+               this happens by selecting a random [relatively small] subset of itself (i.e. a set of indices), and 
+               having child1 and child2 swap their letters at these indices.
+
+               the idea is that each parent might have found a successful schedule of a small "chunk" of students
+               that the other parent did not find yet (or was not successful in that overall environment), and this
+               is a way to inject those small "local" changes (local in the sense that it is an improvement that can
+               be made to a small cohort of students that doesn't really affect those outside of this cohort).
+            3. so whenever we take a parent from island1 to cross it with a parent from island2, the original population
+               [of island1] gets 2 children: one that is a near-clone of parent1 (and island1 native), and another one
+               that is a near-clone of parent2 (a foreigner from island2)
+
+        ****
+
+        I HAVE NO IDEA IF THIS "SHOULD" WORK OR WHAT... it's just what I came up with from "thinking about it",
+        and it seems to yield some improvements in my testing. if you find an improvement, that's even better!
+        """
+
+
+        # a pair of parents generates a pair of children
+        child1, child2 = get_children_pair(parent1, parent2)
+
+
         # mutate:
         mutated_child1 = self.mutate(child1)
         mutated_child2 = self.mutate(child2)
@@ -1748,25 +1761,12 @@ class GeneticAlgorithm(Population):
         """         
         scored_population_length = len(scored_population)
 
-        # select three individuals at random from the population
-        tournament_member1 = random.randint(0,scored_population_length - 1)
-        tournament_member2 = random.randint(0,scored_population_length - 1)
-        tournament_member3 = random.randint(0,scored_population_length - 1)
-            
-        # we want our parents to have the largest weighted_fitness_score possible
-        #
-        # since the individuals are sorted by descending fitness scores, 
-        # the winner of the tournament will be the individual at the smallest index:
-        parent1_index = min(tournament_member1, tournament_member2, tournament_member3)
-        # we have selected our first parent:
+        # select the two parents using tournament selection
+        # the number 4 is somewhat arbitrary, but seems to work well in practice
+        parent1_index = tournament_winner_index(scored_population_length, 4)
         parent1 = list(scored_population[parent1_index])
         
-        # repeat for parent2:    
-        tournament_member1 = random.randint(0,scored_population_length - 1)
-        tournament_member2 = random.randint(0,scored_population_length - 1)
-        tournament_member3 = random.randint(0,scored_population_length - 1)
-            
-        parent2_index = min(tournament_member1, tournament_member2, tournament_member3)
+        parent2_index = tournament_winner_index(scored_population_length, 4)
         parent2 = list(scored_population[parent2_index])
         
         # return the parents as a tuple:
@@ -2146,7 +2146,6 @@ def run_era(student_csv_path, required_subgroups_csv_path, preferred_subgroups_c
 
 
     # We ran all of the eras we were supposed to run, we can exit now
-    print("exiting...")
     return 0
             
 
@@ -2184,20 +2183,12 @@ def get_crossed_children(population1, population2, num_children):
     crossed_children_list = []
     
     for _ in range(num_children//2):
-        # get parent1 via tournament selection on population1
-        pop1_rep1 = random.randint(0, population_size)
-        pop1_rep2 = random.randint(0, population_size)
-        pop1_rep3 = random.randint(0, population_size)
-        pop1_rep4 = random.randint(0, population_size)
-        parent1_index = min(pop1_rep1, pop1_rep2, pop1_rep3, pop1_rep4)
+        # select the two parents using tournament selection
+        # the number 4 is somewhat arbitrary, but seems to work well in practice
+        parent1_index = tournament_winner_index(population_size, 4)
         parent1 = population1[parent1_index]
-
-        # get parent2 via tournament selection on population2
-        pop2_rep1 = random.randint(0, population_size)
-        pop2_rep2 = random.randint(0, population_size)
-        pop2_rep3 = random.randint(0, population_size)
-        pop2_rep4 = random.randint(0, population_size)
-        parent2_index = min(pop2_rep1, pop2_rep2, pop2_rep3, pop2_rep4)
+        
+        parent2_index = tournament_winner_index(population_size, 4)
         parent2 = population2[parent2_index]
 
         
@@ -2205,48 +2196,11 @@ def get_crossed_children(population1, population2, num_children):
         genome_length = len(parent1)
         
 
-        """
-        a given pair of parents create 2 new children:
-            1. child1 starts off as a clone of parent1, just as child2 starts off as a clone of parent2.
-            2. these 2 clones then have an opportunity to swap some genes (individual student letter assignments).
-               this happens by selecting a random [relatively small] subset of itself (i.e. a set of indices), and 
-               having child1 and child2 swap their letters at these indices.
-
-               the idea is that each parent might have found a successful schedule of a small "chunk" of students
-               that the other parent did not find yet (or was not successful in that overall environment), and this
-               is a way to inject those small "local" changes (local in the sense that it is an improvement that can
-               be made to a small cohort of students that doesn't really affect those outside of this cohort).
-            3. so whenever we take a parent from island1 to cross it with a parent from island2, the original population
-               [of island1] gets 2 children: one that is a near-clone of parent1 (and island1 native), and another one
-               that is a near-clone of parent2 (a foreigner from island2)
-
-        ****
-
-        I HAVE NO IDEA IF THIS "SHOULD" WORK OR WHAT... it's just what I came up with from "thinking about it",
-        and it seems to yield some improvements in my testing. if you find an improvement, that's even better!
-        """
 
 
-        # child1 and child2 start off as clones of their respective parents
-        child1 = parent1[:]
-        child2 = parent2[:]
+        # a pair of parents generates a pair of children
+        child1, child2 = get_children_pair(parent1, parent2)
 
-
-        # size of cohort to inject, i.e. number of letters to replace in the partition
-        # this is purely based on [what seems right to me] based on some limited experimentation
-        # far from finalized, please feel free to play around with the parameters
-        # some small number (such as between 10 and 40) seems to work best
-        injection_size = random.randint(10,40)
-
-        # choose injection_size random indexes which will get the other parent's genes
-        for _ in range(injection_size):
-            # choose 
-            rand_index = random.randint(0, genome_length-1)
-            temp = child1[rand_index]
-            child1[rand_index] = child2[rand_index]
-            child2[rand_index] = temp
-
-     
         # add the pair of children to the output list
         crossed_children_list.append(child1)
         crossed_children_list.append(child2)
@@ -2259,6 +2213,95 @@ def get_crossed_children(population1, population2, num_children):
             crossed_children_list = crossed_children_list[0:-1]
 
     return crossed_children_list
+
+
+
+def get_children_pair(parent1, parent2):
+    """
+    a given pair of parents create 2 new children:
+        1. child1 starts off as a clone of parent1, just as child2 starts off as a clone of parent2.
+        2. these 2 clones then have an opportunity to swap some genes (individual student letter assignments).
+           this happens by selecting a random [relatively small] subset of itself (i.e. a set of indices), and 
+           having child1 and child2 swap their letters at these indices.
+
+           the idea is that each parent might have found a successful schedule of a small "chunk" of students
+           that the other parent did not find yet (or was not successful in that overall environment), and this
+           is a way to inject those small "local" changes (local in the sense that it is an improvement that can
+           be made to a small cohort of students that doesn't really affect those outside of this cohort).
+        3. so whenever we take a parent from island1 to cross it with a parent from island2, the original population
+           [of island1] gets 2 children: one that is a near-clone of parent1 (and island1 native), and another one
+           that is a near-clone of parent2 (a foreigner from island2)
+
+    ****
+
+    I HAVE NO IDEA IF THIS "SHOULD" WORK OR WHAT... it's just what I came up with from "thinking about it",
+    and it seems to yield some improvements in my testing. if you find an improvement, that's even better!
+
+
+    Parameters
+    ----------
+    parent1:
+        list of letters representing parent1 (the partition)
+
+    parent2:
+        list of letters representing parent1 (the partition)
+
+    """    
+
+
+    genome_length = min(len(parent1), len(parent2))
+
+
+    # child1 and child2 start off as clones of their respective parents
+    child1 = parent1[:]
+    child2 = parent2[:]
+
+
+    # size of cohort to inject, i.e. number of letters to replace in the partition
+    # this is purely based on [what seems right to me] based on some limited experimentation
+    # far from finalized, please feel free to play around with the parameters
+    # some small number (such as between 10 and 40) seems to work best
+    injection_size = random.randint(10,30)
+
+    # choose injection_size random indexes which will get the other parent's genes
+    for _ in range(injection_size):
+        # choose 
+        rand_index = random.randint(0, genome_length-1)
+        temp = child1[rand_index]
+        child1[rand_index] = child2[rand_index]
+        child2[rand_index] = temp
+
+    return child1, child2
+
+
+def tournament_winner_index(array_length, num_reps):
+    """
+    Helper function. Uses tournament selection with num_reps representatives to 
+    select an index for an array of length array_length.
+
+    Source (tournament selection): https://en.wikipedia.org/wiki/Tournament_selection
+
+    Parameters
+    ----------
+    array_length: int
+        the length of the array for which we are using tournament selection
+
+    num_reps: int
+        number of representatives to use for tournament selection
+
+    """    
+    
+    # our population is stored in descending order, so start off by assuming
+    # we have the worst possible index, then we get num_reps tries
+    # to improve upon (i.e. to minimize) this value
+    cur_winner = array_length
+
+    for _ in range(num_reps):
+        cur_winner = min(cur_winner, random.randint(0, array_length-1))
+
+    return cur_winner
+
+
 
 
 def crossbreed_islands(island_populations, number_of_islands):
@@ -2427,8 +2470,9 @@ def main():
 
 
 
-
-
+    # wait for all processes to exit
+    for p in island_processes:
+        p.join()
 
 
 
