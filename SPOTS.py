@@ -38,14 +38,6 @@ import warnings # used in run_loop() to remind users to close output reports
 # number of groups to partition students into (only 2 and 4 are implemented)
 NUMBER_OF_PARTITIONS = 4
 
-
-# list of possible student letters (or labels)
-if NUMBER_OF_PARTITIONS == 2:
-    STUDENT_LETTER_LIST = ["A", "B"]
-elif NUMBER_OF_PARTITIONS == 4:
-    STUDENT_LETTER_LIST = ["A", "B", "C", "D"]
-
-
 # max size of a partition when dividing students into two subgroups (default = 15) 
 HALF_CLASS_MAXIMUM = 15 
 
@@ -65,7 +57,7 @@ NUMBER_OF_GENERATIONS = 100000
 TIME_LIMIT = 60*8
 
 # location of input .csv file (example: "C:\\Users\\jsmith\\Desktop\\")
-IO_DIRECTORY = "C:\\Users\\jsmith\\Documents\\GitHub\\partitionoptimizer\\" 
+IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\" 
 
 # filename of .csv file with student schedule data (default = "example_student_data.csv) 
 INPUT_CSV_FILENAME = "example_student_data.csv" 
@@ -1391,6 +1383,10 @@ class IndividualPartition(Schedule):
         self.number_of_partitions = schedule_obj.number_of_partitions
         self.partition = None
         self.fitness = None
+        if self.number_of_partitions == 2:
+            self.student_letter_list = ["A", "B"]
+        elif self.number_of_partitions == 4:
+            self.student_letter_list = ["A", "B", "C", "D"]
 
     def generate_partition(self):
         """
@@ -1409,7 +1405,7 @@ class IndividualPartition(Schedule):
 
         # populate the list, ex: ["A", "A", "C", "B", "D", "A", ...] 
         for _ in range(number_of_subgroups):
-            letter = random.choice(STUDENT_LETTER_LIST)
+            letter = random.choice(self.student_letter_list)
             student_partition_list.append(letter)        
         
         # store the list in the self.partition attribute
@@ -1485,6 +1481,7 @@ class Population(IndividualPartition):
         self.population = []
         self.sorted_scored_population = []
         self.number_of_partitions = individual_partition_obj.number_of_partitions
+        self.student_letter_list = individual_partition_obj.student_letter_list
 
     def generate_individual(self):
         """
@@ -1595,6 +1592,7 @@ class GeneticAlgorithm(Population):
         self.current_generation = [(population[0],population[1][:]) for population in population_obj.sorted_scored_population]
         self.next_generation = None
         self.number_of_partitions = population_obj.number_of_partitions
+        self.student_letter_list = population_obj.student_letter_list
     
     def mutate(self, individual_partition):
         """
@@ -1624,7 +1622,7 @@ class GeneticAlgorithm(Population):
                 # for example, if letter = "A" and 
                 # STUDENT_LETTER_LIST = ["A","B","C","D"], then
                 # intersected_list = ["B","C","D"]
-                intersected_list = [element for element in STUDENT_LETTER_LIST if element != letter]
+                intersected_list = [element for element in self.student_letter_list if element != letter]
                 
                 # mutated letter is a random selection from
                 # intersected_list:
