@@ -1706,31 +1706,9 @@ class GeneticAlgorithm(Population):
         
         # the length of the parent lists
         genome_length = len(parent1)
-        
-
-        """
-        a given pair of parents create 2 new children:
-            1. child1 starts off as a clone of parent1, just as child2 starts off as a clone of parent2.
-            2. these 2 clones then have an opportunity to swap some genes (individual student letter assignments).
-               this happens by selecting a random [relatively small] subset of itself (i.e. a set of indices), and 
-               having child1 and child2 swap their letters at these indices.
-
-               the idea is that each parent might have found a successful schedule of a small "chunk" of students
-               that the other parent did not find yet (or was not successful in that overall environment), and this
-               is a way to inject those small "local" changes (local in the sense that it is an improvement that can
-               be made to a small cohort of students that doesn't really affect those outside of this cohort).
-            3. so whenever we take a parent from island1 to cross it with a parent from island2, the original population
-               [of island1] gets 2 children: one that is a near-clone of parent1 (and island1 native), and another one
-               that is a near-clone of parent2 (a foreigner from island2)
-
-        ****
-
-        I HAVE NO IDEA IF THIS "SHOULD" WORK OR WHAT... it's just what I came up with from "thinking about it",
-        and it seems to yield some improvements in my testing. if you find an improvement, that's even better!
-        """
 
 
-        # a pair of parents generates a pair of children
+        # one pair of parents produce one pair of children
         child1, child2 = get_children_pair(parent1, parent2)
 
 
