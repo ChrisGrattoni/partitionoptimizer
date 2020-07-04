@@ -50,6 +50,13 @@ elif NUMBER_OF_PARTITIONS == 4:
 # number of processes to launch
 NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
 
+
+# for the tournament selection when crossbreeding across islands,
+# the number of representatives to use. the below seems to work
+# well in practice.
+NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND = NUMBER_OF_PROCESSES//4
+
+
 # max size of a partition when dividing students into two subgroups (default = 15) 
 HALF_CLASS_MAXIMUM = 15 
 
@@ -1735,16 +1742,21 @@ class GeneticAlgorithm(Population):
             a list of individuals in the form [partition1, partition2, partition3,...], 
             where the list is sorted in descending fitness order 
             (that is, fitness(partitionX) > fitness(partitionY) for X < Y)
-
-        """         
+        """
         scored_population_length = len(scored_population)
+
+
+        # for the tournament selection when crossing two partitions within an island,
+        # the number of representatives to use. the below seems to work well in practice.
+        number_of_tournament_reps_per_population = scored_population_length //400
+
 
         # select the two parents using tournament selection
         # the number 4 is somewhat arbitrary, but seems to work well in practice
-        parent1_index = tournament_winner_index(scored_population_length, 4)
+        parent1_index = tournament_winner_index(scored_population_length, number_of_tournament_reps_per_population)
         parent1 = list(scored_population[parent1_index])
         
-        parent2_index = tournament_winner_index(scored_population_length, 4)
+        parent2_index = tournament_winner_index(scored_population_length, number_of_tournament_reps_per_population)
         parent2 = list(scored_population[parent2_index])
         
         # return the parents as a tuple:
@@ -2128,7 +2140,7 @@ def run_era(student_csv_path, required_subgroups_csv_path, preferred_subgroups_c
             
 
 
-def get_crossed_children(population1, population2, num_children):
+def get_crossed_children(population1, population2, num_children, num_tournament_reps):
     """
     Helper function used by crossbreed_islands. Given two populations, this method
     uses tournament selection to choose a parent from each population. These two
@@ -2151,6 +2163,8 @@ def get_crossed_children(population1, population2, num_children):
         parent2 will be selected from this
     num_children: int
         number of children to generate and return
+    num_tournament_reps: int
+        for the tournament selection to select parents, the number of representatives to use
     """  
 
 
@@ -2163,10 +2177,10 @@ def get_crossed_children(population1, population2, num_children):
     for _ in range(num_children//2):
         # select the two parents using tournament selection
         # the number 4 is somewhat arbitrary, but seems to work well in practice
-        parent1_index = tournament_winner_index(population_size, 4)
+        parent1_index = tournament_winner_index(population_size, num_tournament_reps)
         parent1 = population1[parent1_index]
         
-        parent2_index = tournament_winner_index(population_size, 4)
+        parent2_index = tournament_winner_index(population_size, num_tournament_reps)
         parent2 = population2[parent2_index]
 
         
@@ -2346,11 +2360,11 @@ def crossbreed_islands(island_populations, number_of_islands):
             
             # cross the two islands and add the children to cross_pop 
             # (the number of children added will = num_children)
-            crossed_pop.extend(get_crossed_children(first_pop, second_pop, num_children))
+            crossed_pop.extend(get_crossed_children(first_pop, second_pop, num_children, NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND))
         
         # cross with the last island and add the children to cross_pop
         # (this time, the number of children added will = remainder)
-        crossed_pop.extend(get_crossed_children(first_pop, island_populations[-1], remainder))
+        crossed_pop.extend(get_crossed_children(first_pop, island_populations[-1], remainder, NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND))
 
     # return the list of crossed populations
     return crossed_populations
