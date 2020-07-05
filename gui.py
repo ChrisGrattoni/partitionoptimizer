@@ -36,6 +36,8 @@ from tkinter import *
 from tkinter.ttk import *
 from tkinter import filedialog
 import os
+import threading
+
 
 IO_DIRECTORY = os.path.dirname(os.path.abspath(__file__)) + "/"
 
@@ -73,9 +75,20 @@ def launch(widget_list):
     for widget in widget_list:
         widget.destroy()
     
-    run_loop(INPUT_CSV_FILENAME, REQUIRED_SUBGROUP_CSV_FILENAME, PREFERRED_SUBGROUP_CSV_FILENAME, NUMBER_OF_PARTITIONS, HALF_CLASS_MAXIMUM, QUARTER_CLASS_MAXIMUM, POPULATION_SIZE, MUTATION_RATE, NUMBER_OF_GENERATIONS, TIME_LIMIT)
+    sd_label = Label(window, text = 'Launching genetic algorithm', font = ('bold', 12), padding='0.1i')
+    sd_label.grid(sticky = "W", row = 0, column = 0)
     
-
+    new_thread = threading.Thread(target = run_loop, args = (INPUT_CSV_FILENAME, 
+                                                            REQUIRED_SUBGROUP_CSV_FILENAME, 
+                                                            PREFERRED_SUBGROUP_CSV_FILENAME, 
+                                                            NUMBER_OF_PARTITIONS, 
+                                                            HALF_CLASS_MAXIMUM, 
+                                                            QUARTER_CLASS_MAXIMUM, 
+                                                            POPULATION_SIZE, 
+                                                            MUTATION_RATE, 
+                                                            NUMBER_OF_GENERATIONS, 
+                                                            TIME_LIMIT))
+    new_thread.start()
     
 # window object
 window = Tk()
@@ -158,12 +171,14 @@ tl_label.grid(sticky = "W", row = 9, column = 0)
 tl_entry = Entry(window, textvariable = tl_text)
 tl_entry.grid(row = 9, column = 1)
 
+
 # start button
 start_button = Button(window, text = "Start", command = lambda: launch(w_list))
 start_button.grid(row = 10, column = 0, columnspan = 4, sticky = W+E, padx=10)
 
 # list of widgets
 w_list = [ps_label, ps_option_menu, tg_label, tg_entry, fg_label, fg_entry, sd_label, sd_button_frame, rs_label, rs_button_frame, psub_label, psub_button_frame, tl_label, tl_entry, start_button, sd_location_label, rs_location_label, psub_location_label]
+
 
 # the title for the window
 window.title('Student Partition Optimization Tool for Schools')
