@@ -64,16 +64,28 @@ HALF_CLASS_MAXIMUM = 15
 QUARTER_CLASS_MAXIMUM = 9
 
 # recommended range: between 0.01 and 0.05, (default = 0.015)
-MUTATION_RATE = 0.025 
+MUTATION_RATE = 0.01
 
-# recommended range: between 100 and 1,000, (default = 200)
-POPULATION_SIZE = 40
+# on my 16-core machine, this seems to work best
+# (for each core/island, during the end-of-era crossbreeding stage:
+# 25% elites = top 15, then the remaining 45 is made up of
+# [15 neighboring islands to cross with] * [3 partitions per island]
+# the "right" value here is going to depend a lot on number of cores,
+# so you can play around with this to see what seems to work best
+# recommended range, at least according to my experimentation: 20 - 80
+POPULATION_SIZE = 60
 
-# recommended range: ???
-NUMBER_OF_ERAS = 3000
+# recommended range: run it for as long as you have time, or until the
+# [number of compliant sections] metric seems to plateau out.
+NUMBER_OF_ERAS = 1500
 
-# recommended range: at least 10,000 (default = 100000)
-NUMBER_OF_GENERATIONS_PER_ERA = 10
+# in my experience while testing with 16 cores, a small number here made sense
+# (with more frequent crossbreeding between islands). i believe this is because
+# there are a lot of islands to cross with, and with 15 neighboring islands chances are
+# good that one of your neighbors has found some opimization feature that you haven't yet
+# if you have fewer cores, then i think this number should probably increase a bit
+# recommended range, at least according to my experimentation: 10 - 50
+NUMBER_OF_GENERATIONS_PER_ERA = 20
 
 # location of input .csv file, (example: "C:\\Users\\jsmith\\Desktop\\")
 #IO_DIRECTORY = "C:\\Users\\cgrattoni\\Documents\\GitHub\\partitionoptimizer\\" 
@@ -1748,7 +1760,7 @@ class GeneticAlgorithm(Population):
 
         # for the tournament selection when crossing two partitions within an island,
         # the number of representatives to use. the below seems to work well in practice.
-        number_of_tournament_reps_per_population = scored_population_length //400
+        number_of_tournament_reps_per_population = scored_population_length //10
 
 
         # select the two parents using tournament selection
