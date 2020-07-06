@@ -34,7 +34,7 @@ import warnings # used in run_loop() to remind users to close output reports
                 # before running the algorithm a second time 
 import multiprocessing # run the genetic algorithm in parallel on multiple cores
 import os   # used for getting the process ID via os.getpid()
-from pathlib import Path 
+from pathlib import Path # used for getting directory of SPOTS.py
 
 # SCHOOL-SPECIFIC SETTINGS:
 
