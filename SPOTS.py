@@ -1,11 +1,7 @@
 """
 Name: Student Partition Optimization Tool for Schools (SPOTS)
 
-<<<<<<< Updated upstream
-Version: 1.0.0a3
-=======
 Version: 1.0.0a4
->>>>>>> Stashed changes
 
 Summary: Optimize a student partition (usually assigning each student to A/B/C/D) to facilitate physical distancing in classrooms
 
@@ -36,12 +32,9 @@ import time # use when benchmarking and setting an evaluation time limit:
             # print("Benchmark result = " + str(end - start))
 import warnings # used in run_loop() to remind users to close output reports
                 # before running the algorithm a second time 
-<<<<<<< Updated upstream
-=======
 import multiprocessing # run the genetic algorithm in parallel on multiple cores
 import os   # used for getting the process ID via os.getpid()
 from pathlib import Path 
->>>>>>> Stashed changes
 
 # SCHOOL-SPECIFIC SETTINGS:
 
@@ -76,56 +69,6 @@ PREFERRED_SUBGROUP_CSV_FILENAME = None
 # studentpartitionoptimizer@gmail.com so I can verify and make these the 
 # new defaults. 
 
-<<<<<<< Updated upstream
-
-# max size of a partition when dividing students into two subgroups (default = 15) 
-HALF_CLASS_MAXIMUM = 15 
-
-# max size of a partition when dividing students into four subgroups (default = 9)
-QUARTER_CLASS_MAXIMUM = 9
-
-# recommended range: between 0.01 and 0.05 (default = 0.015)
-MUTATION_RATE = 0.015 
-
-# recommended range: between 100 and 1,000 (default = 200)
-POPULATION_SIZE = 200 
-
-# recommended range: at least 10,000 (default = 100000)
-NUMBER_OF_GENERATIONS = 100000 
-
-# time measured in minutes (default = 480 min or 8 hr)
-TIME_LIMIT = 60*8
-
-# location of input .csv file (example: "C:\\Users\\jsmith\\Desktop\\")
-IO_DIRECTORY = "C:\\Users\\jsmith\\Documents\\GitHub\\partitionoptimizer\\" 
-
-# filename of .csv file with student schedule data (default = "example_student_data.csv) 
-INPUT_CSV_FILENAME = "example_student_data.csv" 
-INPUT_CSV_FILENAME = IO_DIRECTORY + INPUT_CSV_FILENAME
-
-# filename of .csv file with required student subgrouping data 
-# example data = "example_subgroups.csv"
-# if not applicable, use None
-REQUIRED_SUBGROUP_CSV_FILENAME = None # also try "example_subgroups.csv" 
-
-if REQUIRED_SUBGROUP_CSV_FILENAME is not None:
-    REQUIRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + REQUIRED_SUBGROUP_CSV_FILENAME
-
-# filename of .csv file with preferred student subgrouping data (default = None) 
-# example data = "example_subgroups.csv"
-# if not applicable, use None
-PREFERRED_SUBGROUP_CSV_FILENAME = None # also try "example_subgroups.csv" 
-
-if PREFERRED_SUBGROUP_CSV_FILENAME is not None:
-    PREFERRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY + PREFERRED_SUBGROUP_CSV_FILENAME
-
-# REQUEST FOR USERS
-#
-# As you experiment with the MUTATION_RATE, POPULATION_SIZE, and NUMBER_OF_GENERATIONS,
-# you may happen upon a combination of values that optimizes more efficiently than the
-# default settings in this program. If so, please share these values with me at 
-# studentpartitionoptimizer@gmail.com so I can verify and make these the new defaults.
-=======
 # number of processes to launch
 NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
 
@@ -172,7 +115,6 @@ if REQUIRED_SUBGROUP_CSV_FILENAME is not None:
 
 if PREFERRED_SUBGROUP_CSV_FILENAME is not None:
     PREFERRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY / PREFERRED_SUBGROUP_CSV_FILENAME
->>>>>>> Stashed changes
 
 class Student:
     """
@@ -1505,6 +1447,26 @@ class IndividualPartition(Schedule):
         
         return self.partition
 
+    
+    def load_partition(self, partition):
+        """
+        A method to load a partition into memory given a string representation
+        
+        Parameters
+        ----------
+        partition:
+            a list of the form ["A", "C", "D", ...]
+        
+        """     
+        student_partition_list = []
+
+        for student_partition_assignment in partition:
+            student_partition_list.append(student_partition_assignment)
+
+        self.partition = student_partition_list
+        return self.partition
+
+
     def return_fitness(self):
         """
         A method that loads the current partition into the Schedule object
@@ -1588,6 +1550,25 @@ class Population(IndividualPartition):
         """
         
         return self.individual_partition_obj.generate_partition()
+
+
+    def load_population(self, population):
+        """
+        A method to load a population into memory given a string representation
+        
+        Parameters
+        ----------
+        population:
+            a list of partitions, where each partition is represented as a list ["A", "C", "D", ...]
+            Example: [ ["A", "C", "D"], ["B", "B", "A"], ["C", "A", "A"] ]
+        
+        """        
+        
+        self.population = []
+        for partition in population:
+            individual = self.individual_partition_obj.load_partition(partition)
+            self.population.append(individual)
+
 
     def populate(self):
         """
@@ -1758,21 +1739,12 @@ class GeneticAlgorithm(Population):
         
         # the length of the parent lists
         genome_length = len(parent1)
-        
-        # determine a random cutpoint 
-        cutpoint = random.randint(1, genome_length - 1)
-        
-        # slice both parents at the cutpoint:
-        parent1_slice1 = parent1[:cutpoint] 
-        parent1_slice2 = parent1[cutpoint:] 
-        
-        parent2_slice1 = parent2[:cutpoint] 
-        parent2_slice2 = parent2[cutpoint:] 
-        
-        # create the children by combining the slices (crossover)
-        child1 = parent1_slice1 + parent2_slice2
-        child2 = parent2_slice1 + parent1_slice2
-        
+
+
+        # one pair of parents produce one pair of children
+        child1, child2 = get_children_pair(parent1, parent2)
+
+
         # mutate:
         mutated_child1 = self.mutate(child1)
         mutated_child2 = self.mutate(child2)
@@ -1796,29 +1768,21 @@ class GeneticAlgorithm(Population):
             a list of individuals in the form [partition1, partition2, partition3,...], 
             where the list is sorted in descending fitness order 
             (that is, fitness(partitionX) > fitness(partitionY) for X < Y)
-
-        """         
+        """
         scored_population_length = len(scored_population)
 
-        # select three individuals at random from the population
-        tournament_member1 = random.randint(0,scored_population_length - 1)
-        tournament_member2 = random.randint(0,scored_population_length - 1)
-        tournament_member3 = random.randint(0,scored_population_length - 1)
-            
-        # we want our parents to have the largest weighted_fitness_score possible
-        #
-        # since the individuals are sorted by descending fitness scores, 
-        # the winner of the tournament will be the individual at the smallest index:
-        parent1_index = min(tournament_member1, tournament_member2, tournament_member3)
-        # we have selected our first parent:
+
+        # for the tournament selection when crossing two partitions within an island,
+        # the number of representatives to use. the below seems to work well in practice.
+        number_of_tournament_reps_per_population = scored_population_length //10
+
+
+        # select the two parents using tournament selection
+        # the number 4 is somewhat arbitrary, but seems to work well in practice
+        parent1_index = tournament_winner_index(scored_population_length, number_of_tournament_reps_per_population)
         parent1 = list(scored_population[parent1_index])
         
-        # repeat for parent2:    
-        tournament_member1 = random.randint(0,scored_population_length - 1)
-        tournament_member2 = random.randint(0,scored_population_length - 1)
-        tournament_member3 = random.randint(0,scored_population_length - 1)
-            
-        parent2_index = min(tournament_member1, tournament_member2, tournament_member3)
+        parent2_index = tournament_winner_index(scored_population_length, number_of_tournament_reps_per_population)
         parent2 = list(scored_population[parent2_index])
         
         # return the parents as a tuple:
@@ -1900,9 +1864,6 @@ class GeneticAlgorithm(Population):
         
         return self.population_obj.sorted_scored_population
 
-<<<<<<< Updated upstream
-def run_loop(student_csv_path, required_subgroups_csv_path, preferred_subgroups_csv_path, number_of_partitions, half_class_maximum, quarter_class_maximum, pop_size, rate_of_mutation, max_gen, max_time):
-=======
 def run_era(student_csv_path, 
             required_subgroups_csv_path, 
             preferred_subgroups_csv_path, 
@@ -1915,7 +1876,6 @@ def run_era(student_csv_path,
             max_gen, 
             out_queue, 
             in_queue):
->>>>>>> Stashed changes
     """
     Repeat the Genetic Algorithm based on a specified number of generations (or time limit)
                 
@@ -1936,12 +1896,19 @@ def run_era(student_csv_path,
         the size of the population in the genetic algorithm
     rate_of_mutation: float
         the mutation rate in the genetic algorithm
+    max_era: int
+        the number of eras to run
     max_gen: int
-        the maximum number of generations to run the algorithm
-    max_time: int
-        the maximum number of minutes to run the algorithm
+        the number of generations per era to run the algorithm
+    out_queue: multiprocessing.Queue()
+        threadsafe outbound queue, used to report final population to main()
+    in_queue: multiprocessing.Queue()
+        threadsafe inbound queue, used to receive crossbred population from main()
     """     
     
+    # this function is run by child processes that main() launches, so grab the process ID for logging purposes
+    process_ID_as_string = str(os.getpid())
+
     # initializer the timer to 0
     timer_total = 0
     
@@ -1949,6 +1916,7 @@ def run_era(student_csv_path,
     start_timer = time.perf_counter()
     
     generation_number = 1
+    era_number = 0
     
     # instantiate the Schedule object
     load_schedule = Schedule(number_of_partitions, half_class_maximum, quarter_class_maximum)
@@ -1987,10 +1955,11 @@ def run_era(student_csv_path,
 
     # Uncomment below to track how long this took:
     # (This includes the initial CSV load, so it will be a bit longer than the general case)
-    print("Benchmark result = " + str(end_timer - start_timer))
+    # print("Benchmark result = " + str(end_timer - start_timer))
 
     # Concatenate a string to report progress:
-    progress_string = "Generation = "
+    progress_string = "PID(" + process_ID_as_string + "):"
+    progress_string += "Generation = "
     progress_string += str(generation_number)
     progress_string += ", Fitness = "
     progress_string += str(previous_population[0][0][0])
@@ -1998,6 +1967,7 @@ def run_era(student_csv_path,
     progress_string += str(previous_population[0][0][2])
     progress_string += " out of "
     progress_string += str(previous_population[0][0][-1])   
+    progress_string += ", elapsed time so far this era (sec) = " + str(timer_total)
     
     # Print progress & write to the progress log:
     print(progress_string)
@@ -2009,7 +1979,7 @@ def run_era(student_csv_path,
 
     # keep repeating this process until the maximum number
     # of generations or the time limit has been reached
-    while generation_number < max_gen and timer_total < 60*max_time:
+    while generation_number < max_gen:
         
         # same process as above
         start_timer = time.perf_counter()
@@ -2028,7 +1998,8 @@ def run_era(student_csv_path,
         # (This is the general case WITHOUT initial CSV load)
         # print("Benchmark result = " + str(end_timer - start_timer))
         
-        progress_string = "Generation = "
+        progress_string = "PID[" + process_ID_as_string + "]: "
+        progress_string += "Generation = "
         progress_string += str(generation_number)
         progress_string += ", Fitness = "
         progress_string += str(previous_population[0][0][0])
@@ -2036,6 +2007,7 @@ def run_era(student_csv_path,
         progress_string += str(previous_population[0][0][2])
         progress_string += " out of "
         progress_string += str(previous_population[0][0][-1])
+        progress_string += ", elapsed time so far this era (sec) = " + str(timer_total)
         
         print(progress_string)
 
@@ -2043,14 +2015,15 @@ def run_era(student_csv_path,
             file.write(progress_string)
             file.write("\n") 
         
-        # every 100 generations, write reports on student assignments
-        # and a course-by-course analysis:
-        if generation_number % 100 == 0:
-            intermediate_partition = previous_population[0][1]
+
+    """
+    Now that this era is done, this island process must send its findings back to main(). We can
+    represent our findings as a sorted list: [partition1, partition2, ...], where partition1 is the
+    best, partition2 is second best, etc.
     
-<<<<<<< Updated upstream
-            load_schedule.load_partition(intermediate_partition)
-=======
+    Due to some limitations of Python interprocess communication, we represent each partition as a
+    list of letters rather than an actual IndividualPartition() object.
+    
         Example representation:    [ ["A", "C", "B"], ["B", "A", "C"], ["C", 'C", "A"], ...]
 
     This would mean that, on this island, the most successful partition we found was ["A", "C", "B"]; the
@@ -2168,22 +2141,182 @@ def run_era(student_csv_path,
                 file.write(progress_string)
                 file.write("\n") 
 
->>>>>>> Stashed changes
             
-            load_schedule.write_student_assignments()
-    
-            load_schedule.write_course_analysis()
-        
-        if timer_total >= 60 * max_time:
-            print("Time limit reached: Ended after generation #" + str(generation_number))
-        elif generation_number >= max_gen:
-            print("Generation limit reached: Ended after generation #" + str(generation_number))
-    
+        # Send population back to main()
+        result_population = []
 
-<<<<<<< Updated upstream
-    # Uncomment below to track how long this took:
-    print("Total runtime = " + str(timer_total))
-=======
+        for item in previous_population:
+            result_population.append(item[1])
+
+
+        out_queue.put(result_population)
+
+
+        # at the end of an era, write a student assignment report
+        # and a course-by-course analysis report
+        final_partition = previous_population[0][1]
+        load_schedule.load_partition(final_partition)
+        load_schedule.write_student_assignments()
+        load_schedule.write_course_analysis()
+
+        # now we go back to the start of "while True" loop, where we wait
+        # for main() to send the crossbred population back to us
+        era_number += 1
+
+
+    # We ran all of the eras we were supposed to run, we can exit now
+    return 0
+            
+
+
+def get_crossed_children(population1, population2, num_children, num_tournament_reps):
+    """
+    Helper function used by crossbreed_islands. Given two populations, this method
+    uses tournament selection to choose a parent from each population. These two
+    parents then create a pair of children. This process is repeated until num_children
+    children are produced.
+
+    Returns a list of children, where each child is a partition
+    (so it's returning a list of list of strings)
+
+    THIS LOGIC WILL BE CHANGED QUITE A BIT IN THE NEXT CHECK IN,
+    TRYING TO KEEP THIS CHECK IN TO JUST THE MULTIPROCESSING STUFF
+
+    Parameters
+    ----------
+    population1:
+        represents the population of an island: [ ["A", "B", ...], ["B", "C", ...], ... ]
+        parent1 will be selected from this
+    population2:
+        represents the population of an island: [ ["A", "B", ...], ["B", "C", ...], ... ]
+        parent2 will be selected from this
+    num_children: int
+        number of children to generate and return
+    num_tournament_reps: int
+        for the tournament selection to select parents, the number of representatives to use
+    """  
+
+
+    # size of each population
+    population_size = len(population1)
+
+    # list to store the children
+    crossed_children_list = []
+    
+    for _ in range(num_children//2):
+        # select the two parents using tournament selection
+        # the number 4 is somewhat arbitrary, but seems to work well in practice
+        parent1_index = tournament_winner_index(population_size, num_tournament_reps)
+        parent1 = population1[parent1_index]
+        
+        parent2_index = tournament_winner_index(population_size, num_tournament_reps)
+        parent2 = population2[parent2_index]
+
+        
+        # length of a partition
+        genome_length = len(parent1)
+        
+
+
+
+        # a pair of parents generates a pair of children
+        child1, child2 = get_children_pair(parent1, parent2)
+
+        # add the pair of children to the output list
+        crossed_children_list.append(child1)
+        crossed_children_list.append(child2)
+
+
+        # We are generating children in pairs, if we accidentally
+        # add one child too many to self.next_generation, take off 
+        # the extra child 
+        if len(crossed_children_list) > num_children: 
+            crossed_children_list = crossed_children_list[0:-1]
+
+    return crossed_children_list
+
+
+
+def get_children_pair(parent1, parent2):
+    """
+    a given pair of parents create 2 new children:
+        1. child1 starts off as a clone of parent1, just as child2 starts off as a clone of parent2.
+        2. these 2 clones then have an opportunity to swap some genes (individual student letter assignments).
+           this happens by selecting a random [relatively small] subset of itself (i.e. a set of indices), and 
+           having child1 and child2 swap their letters at these indices.
+
+           the idea is that each parent might have found a successful schedule of a small "chunk" of students
+           that the other parent did not find yet (or was not successful in that overall environment), and this
+           is a way to inject those small "local" changes (local in the sense that it is an improvement that can
+           be made to a small cohort of students that doesn't really affect those outside of this cohort).
+        3. so whenever we take a parent from island1 to cross it with a parent from island2, the original population
+           [of island1] gets 2 children: one that is a near-clone of parent1 (and island1 native), and another one
+           that is a near-clone of parent2 (a foreigner from island2)
+
+    ****
+
+    I HAVE NO IDEA IF THIS "SHOULD" WORK OR WHAT... it's just what I came up with from "thinking about it",
+    and it seems to yield some improvements in my testing. if you find an improvement, that's even better!
+
+
+    Parameters
+    ----------
+    parent1:
+        list of letters representing parent1 (the partition)
+
+    parent2:
+        list of letters representing parent1 (the partition)
+
+    """    
+
+
+    genome_length = min(len(parent1), len(parent2))
+
+
+    # child1 and child2 start off as clones of their respective parents
+    child1 = parent1[:]
+    child2 = parent2[:]
+
+
+    # size of cohort to inject, i.e. number of letters to replace in the partition
+    # this is purely based on [what seems right to me] based on some limited experimentation
+    # far from finalized, please feel free to play around with the parameters
+    # some small number (such as between 10 and 40) seems to work best
+    injection_size = random.randint(10,30)
+
+    # choose injection_size random indexes which will get the other parent's genes
+    for _ in range(injection_size):
+        # choose 
+        rand_index = random.randint(0, genome_length-1)
+        temp = child1[rand_index]
+        child1[rand_index] = child2[rand_index]
+        child2[rand_index] = temp
+
+    return child1, child2
+
+
+def tournament_winner_index(array_length, num_reps):
+    """
+    Helper function. Uses tournament selection with num_reps representatives to 
+    select an index for an array of length array_length.
+
+    Source (tournament selection): https://en.wikipedia.org/wiki/Tournament_selection
+
+    Parameters
+    ----------
+    array_length: int
+        the length of the array for which we are using tournament selection
+
+    num_reps: int
+        number of representatives to use for tournament selection
+
+    """    
+    
+    # our population is stored in descending order, so start off by assuming
+    # we have the worst possible index, then we get num_reps tries
+    # to improve upon (i.e. to minimize) this value
+    cur_winner = array_length
+
     for _ in range(num_reps):
         cur_winner = min(cur_winner, random.randint(0, array_length-1))
 
@@ -2215,19 +2348,25 @@ def crossbreed_islands(island_populations, number_of_islands, number_of_tourname
     
     # each population keeps the top 25% elites
     num_elites = len(island_populations[0])//4
->>>>>>> Stashed changes
 
-    # at the end of the algorithm, write a student assignment report
-    # and a course-by-course analysis report
-    final_partition = previous_population[0][1]
+    # an empty list for each of the crossed populations 
+    crossed_populations = [[] for _ in range(number_of_islands)]
     
-    load_schedule.load_partition(final_partition)
+    # populate the 25% elites onto each island:
+    for i in range(number_of_islands):
+        crossed_pop = crossed_populations[i]
+        orig_pop = island_populations[i]
+        crossed_pop.extend([item for item in orig_pop[0:num_elites]])
     
-    load_schedule.write_student_assignments()
+    # for each island population, the remaining 75% is composed of 
+    # [crossing with each of the other (number_of_islands - 1) islands].
+
+    # divide the remaining number of partitions as evenly as possible into
+    # (1/((number_of_islands - 1)))ths
     
-<<<<<<< Updated upstream
-    load_schedule.write_course_analysis()
-=======
+    # most groups will be of this size:
+    num_children = (len(island_populations[0]) - num_elites)//(number_of_islands - 1)
+    
     # the last group will be composed of whatever space is left over:
     remainder = len(island_populations[0]) - num_elites - (num_children)*(number_of_islands - 2)
 
@@ -2261,13 +2400,8 @@ def crossbreed_islands(island_populations, number_of_islands, number_of_tourname
 
 
 
->>>>>>> Stashed changes
 
-# a possible target for using the multiprocessing module:     
 def main():
-<<<<<<< Updated upstream
-    run_loop(INPUT_CSV_FILENAME, REQUIRED_SUBGROUP_CSV_FILENAME, PREFERRED_SUBGROUP_CSV_FILENAME, NUMBER_OF_PARTITIONS, HALF_CLASS_MAXIMUM, QUARTER_CLASS_MAXIMUM, POPULATION_SIZE, MUTATION_RATE, NUMBER_OF_GENERATIONS, TIME_LIMIT)
-=======
     """
     In order to take advantage of multiple cores, main() works as follows:
         1. Launch NUMBER_OF_PROCESSES processes, each of which runs an instance of the run_era() function.
@@ -2370,9 +2504,22 @@ def main():
 
 
 
->>>>>>> Stashed changes
 
 if __name__ == "__main__":
     main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

@@ -1,9 +1,5 @@
-<<<<<<< Updated upstream
-**New in this Version:** Support for assigning siblings to the same letter group.
-=======
 **Multiprocessing:** This version uses a parallel genetic algorithm to obtain significantly better results.
 **Sibling support:** Assign siblings (or any specified student subgroups) to the same cohort.
->>>>>>> Stashed changes
 
 # Student Partition Optimization Tool for Schools (SPOTS)
 State governments and public health agencies have begun recommending that schools implement "Physically Distanced Learning," with a student/teacher ratio of 10/1 or fewer in each classroom. At most schools, this will require rotating groups of students into the school building while other students stay home and learn remotely. This project aims to help schools assign students to an A/B/C/D group in a manner that allows physical distancing in as many classrooms as possible. 
@@ -36,15 +32,8 @@ Python 3.8 (https://www.python.org/downloads/)
 
 ### Getting Started (Example Data)
 
-<<<<<<< Updated upstream
-To try this program with the provided example data, you only need to make a single change to SPOTS.py. At the top of the file, locate the constant named IO_DIRECTORY and indicate the path for example.csv. This will also be where the final reports will be located (student_assignments.csv and course_analysis.csv).
-=======
 To try this program with the provided example data, all you need to do is make sure that SPOTS.py and example_student_data.csv are in the same folder together. When the program terminates, the parent directory of SPOTS.py will contain two two final reports (student_assignments.csv and course_analysis.csv).
->>>>>>> Stashed changes
 
-		# location of input .csv file (example: "C:\\Users\\jsmith\\Desktop\\")
-		IO_DIRECTORY = "C:\\Users\\jsmith\\Documents\\GitHub\\partitionoptimizer\\" 
-		
 After you have the program working with example data, you can try data from your own school. 
 
 ### Getting Started (Your School's Data)
@@ -68,59 +57,6 @@ This .csv file should have an entry for each student course enrollment. For exam
 
 Once you have generated this .csv file, you will have to edit SPOTS.py to indicate the name of your .csv file so that it does not point at the example data anymore. Replace "example_student_data.csv" with the name of your specific file:
 
-<<<<<<< Updated upstream
-		# filename of .csv file with student schedule data (default = "example.csv) 
-		INPUT_CSV_FILENAME = "example_student_data.csv" 
-		
-Next, if your school is implementing an A/B partition, set NUMBER_OF_PARTITIONS = 2. For an A/B/C/D partition, leave the default value of NUMBER_OF_PARTITIONS = 4. You will have to add to this project for a partition size other than 2 or 4:
-
-		# number of groups to partition students into (only 2 and 4 are implemented)
-		NUMBER_OF_PARTITIONS = 4
-
-You can also modify the desired size of the letter partition in each classroom. By default, the program will try to assign no more than 9 students of each letter (A/B/C/D) and 15 students in the paired groups ((A + B) and (C + D)). Here is where to make these changes:
-
-		# max size of a partition when dividing students into two subgroups (default = 15) 
-		HALF_CLASS_MAXIMUM = 15 
-
-		# max size of a partition when dividing students into four subgroups (default = 9)
-		QUARTER_CLASS_MAXIMUM = 9
-
-After making these changes, you are ready to try the program out on real data. 
-		
-## Student Subgroup Support
-
-There are many reasons why schools may want the ability to guarantee that a certain students receive the same letter assignment as other students. The most common case is likely to be to assign siblings to the same letter group. As a result, this program now supports "student subgroups." There are two types of subgroups that this program supports:
-
-*Required* subgroups: The program will enforce that these subgroups be preserved. That is, if Student1 and Student2 are in a subgroup, they _must_ be assigned to the same subgroup. 
-
-*Preferred* subgroups: The program will show a preference for preserving these subgroups, but it will prioritize physical distancing requirements over subgroup integrity. 
-
-### Required Student Subgrouping Example
-
-All you need to try out Student Subgroups is a .csv file with two columns of Student ID numbers:
-
-		ID Num 1, ID Num 2
-        09281381, 20383882
-        42074738, 87172918
-        09281381, 63471199
-
-Look at the first row "09281381, 20383882". Suppose John Smith has the ID number "09281381" and Mary Smith has the ID number "20383882". This row indicates that John Smith and Mary Smith must be assigned to the same letter group. We will not know what particular letter they will be assigned to until the program runs, but we are guaranteed that these two students will share a letter assignment.
-
-In the second row, we have a new set of students who must be assigned to the same group. Suppose James Taylor has the ID number "42074738" and Victor Washington has the ID number "87172918". Then James and Victor must be assigned to the same letter group. 
-
-In the third row, we see that John Smith is back with his ID number of "09281381". Suppose that the second ID number, "63471199", corresponds to William Smith. Now we have a three person subgroup because John, Mary, and William must be assigned to the same letter group. 
-
-In order to try this out with example data, try changing REQUIRED_SUBGROUP_CSV_FILENAME from None to "example_subgroups.csv":
-
-		# filename of .csv file with required student subgrouping data 
-		# example data = "example_subgroups.csv"
-		# if not applicable, use None
-		REQUIRED_SUBGROUP_CSV_FILENAME = None # also try "example_subgroups.csv" 
-
-After you try this out with example data, you can try your own .csv with required student pairings. 
-
-*Warning:* Schools should be wary about assigning too many students to subgroups. This program is more effective when the algorithm can adequately explore its potential solution space. Every time a student is placed into a subgroup, this is placing a limit on the quality of the results the algorithm can produce. In my initial testing, it seems like good results can still be produced when grouping together siblings, but I have not tested what happens with much larger subgrouping restrictions.  
-=======
 		# filename of .csv file with student schedule data (default = "example_student_data.csv) 
 		INPUT_CSV_FILENAME = "example_student_data.csv" 
 		
@@ -130,7 +66,6 @@ Next, if your school is implementing an A/B partition (2 cohorts of students), s
 		NUMBER_OF_PARTITIONS = 4
 
 You can also modify the desired size of the letter partition in each classroom. By default, the program will try to assign no more than 9 students of each letter (A/B/C/D) and 15 students in the paired groups ((A + B) and (C + D)). Here is where to make these changes:
->>>>>>> Stashed changes
 
 		# max size of a partition when dividing students into two subgroups (default = 15) 
 		HALF_CLASS_MAXIMUM = 15 
@@ -148,34 +83,15 @@ There are many reasons why schools may want the ability to guarantee that a cert
 
 *Preferred* subgroups: The program will show a preference for preserving these subgroups, but it will prioritize physical distancing requirements over subgroup integrity. 
 
-<<<<<<< Updated upstream
-If you are familiar with genetic algorithms (or would just like to experiment), you can try changing the default values for MUTATION_RATE, POPULATION_SIZE, and NUMBER_OF_GENERATIONS. You can also set a time limit for how long the algorithm runs: 
-
-		# recommended range: between 0.01 and 0.05 (default = 0.015)
-		MUTATION_RATE = 0.015 
-
-		# recommended range: between 100 and 1,000 (default = 200)
-		POPULATION_SIZE = 200 
-
-		# recommended range: at least 10,000 (default = 100000)
-		NUMBER_OF_GENERATIONS = 100000 
-
-		# time measured in minutes (default = 480 min or 8 hr)
-		TIME_LIMIT = 60*8
-=======
 ### Required Student Subgrouping Example
 
 All you need to try out Student Subgroups is a .csv file with two columns of Student ID numbers:
->>>>>>> Stashed changes
 
 		ID Num 1, ID Num 2
         09281381, 20383882
         42074738, 87172918
         09281381, 63471199
 
-<<<<<<< Updated upstream
-Finally, a genetic algorithm is only as good as its fitness function. If you really want to experiment, find the method Schedule.fitness_score() and make modificatins. These changes can either be tailored to your school's needs, or you might make a modification to obtain optimal results in less time. Please email studentpartitionoptimizer@gmail.com if you have a suggested change to Schedule.fitness_score(). 
-=======
 Look at the first row "09281381, 20383882". Suppose John Smith has the ID number "09281381" and Mary Smith has the ID number "20383882". This row indicates that John Smith and Mary Smith must be assigned to the same letter group. We will not know what particular letter they will be assigned to until the program runs, but we are guaranteed that these two students will share a letter assignment.
 
 In the second row, we have a new set of students who must be assigned to the same group. Suppose James Taylor has the ID number "42074738" and Victor Washington has the ID number "87172918". Then James and Victor must be assigned to the same letter group. 
@@ -198,7 +114,6 @@ After you try this out with example data, you can try your own .csv with require
 If you are familiar with parallel genetic algorithms (or would just like to experiment), you can try changing the default values for MUTATION RATE, POPULATION_SIZE, NUMBER_OF_GENERATIONS_PER_ERA, and NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND. It may be possible to modify these (and other) parameters to obtain better results. Please email studentpartitionoptimizer@gmail.com if you have parameters you would like to suggest for new default values. 
 
 Finally, a genetic algorithm is only as good as its fitness function. If you really want to experiment, find the method Schedule.fitness_score() and modify the logic. These changes can either be tailored to your school's needs, or you might make a modification to obtain optimal results in less time. Please email studentpartitionoptimizer@gmail.com if you have a suggested change to Schedule.fitness_score(). 
->>>>>>> Stashed changes
 
 ### Final Output 
 
