@@ -1,3 +1,5 @@
+### New in this Version
+
 **Multiprocessing:** This version uses a parallel genetic algorithm to obtain significantly better results.
 
 **Sibling support:** Assign siblings (or any specified student subgroups) to the same cohort.
