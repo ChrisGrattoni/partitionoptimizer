@@ -1,7 +1,11 @@
 """
 Name: Student Partition Optimization Tool for Schools (SPOTS)
 
+<<<<<<< Updated upstream
 Version: 1.0.0a3
+=======
+Version: 1.0.0a4
+>>>>>>> Stashed changes
 
 Summary: Optimize a student partition (usually assigning each student to A/B/C/D) to facilitate physical distancing in classrooms
 
@@ -32,19 +36,47 @@ import time # use when benchmarking and setting an evaluation time limit:
             # print("Benchmark result = " + str(end - start))
 import warnings # used in run_loop() to remind users to close output reports
                 # before running the algorithm a second time 
+<<<<<<< Updated upstream
+=======
+import multiprocessing # run the genetic algorithm in parallel on multiple cores
+import os   # used for getting the process ID via os.getpid()
+from pathlib import Path 
+>>>>>>> Stashed changes
 
-# parameters for main algorithm
+# SCHOOL-SPECIFIC SETTINGS:
 
 # number of groups to partition students into (only 2 and 4 are implemented)
 NUMBER_OF_PARTITIONS = 4
 
+# time measured in minutes (default = 480 min or 8 hr)
+TIME_LIMIT = 60*8 
 
-# list of possible student letters (or labels)
-if NUMBER_OF_PARTITIONS == 2:
-    STUDENT_LETTER_LIST = ["A", "B"]
-elif NUMBER_OF_PARTITIONS == 4:
-    STUDENT_LETTER_LIST = ["A", "B", "C", "D"]
+# max size of a partition when dividing students into two cohorts (default = 15) 
+HALF_CLASS_MAXIMUM = 15 
 
+# max size of a partition when dividing students into four cohorts (default = 9)
+QUARTER_CLASS_MAXIMUM = 9
+
+# filename of .csv file with student schedule data (default = "example_student_data.csv) 
+INPUT_CSV_FILENAME = "example_student_data.csv" 
+
+# filename of .csv file with required student subgrouping data (default = "example_subgroups.csv") 
+REQUIRED_SUBGROUP_CSV_FILENAME = "example_subgroups.csv" 
+# if no required subgroups are needed, set the above value to None
+
+# filename of .csv file with preferred student subgrouping data (default = None) 
+PREFERRED_SUBGROUP_CSV_FILENAME = None
+# if no preferred subgroups are needed, set the above value to None
+
+# GENETIC ALGORITHM SETTINGS
+# 
+# If you experiment with the following settings, you may happen upon a 
+# combination of values that optimizes more efficiently than the default 
+# settings in this program. If so, please share these values with me at 
+# studentpartitionoptimizer@gmail.com so I can verify and make these the 
+# new defaults. 
+
+<<<<<<< Updated upstream
 
 # max size of a partition when dividing students into two subgroups (default = 15) 
 HALF_CLASS_MAXIMUM = 15 
@@ -93,6 +125,54 @@ if PREFERRED_SUBGROUP_CSV_FILENAME is not None:
 # you may happen upon a combination of values that optimizes more efficiently than the
 # default settings in this program. If so, please share these values with me at 
 # studentpartitionoptimizer@gmail.com so I can verify and make these the new defaults.
+=======
+# number of processes to launch
+NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
+
+# for the tournament selection when crossbreeding across islands,
+# the number of representatives to use. the below seems to work
+# well in practice.
+NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND = NUMBER_OF_PROCESSES//4
+
+# recommended range: between 0.01 and 0.05, (default = 0.01)
+MUTATION_RATE = 0.01
+
+# on my 16-core machine, this seems to work best
+# (for each core/island, during the end-of-era crossbreeding stage:
+# 25% elites = top 15, then the remaining 45 is made up of
+# [15 neighboring islands to cross with] * [3 partitions per island]
+# the "right" value here is going to depend a lot on number of cores,
+# so you can play around with this to see what seems to work best
+# recommended range, at least according to my experimentation: 20 - 80
+POPULATION_SIZE = 60
+
+# recommended range: run it for as long as you have time, or until the
+# [number of compliant sections] metric seems to plateau out.
+NUMBER_OF_ERAS = 5000
+
+# in my experience while testing with 16 cores, a small number here made sense
+# (with more frequent crossbreeding between islands). i believe this is because
+# there are a lot of islands to cross with, and with 15 neighboring islands chances are
+# good that one of your neighbors has found some opimization feature that you haven't yet
+# if you have fewer cores, then i think this number should probably increase a bit
+# recommended range, at least according to my experimentation: 10 - 50
+NUMBER_OF_GENERATIONS_PER_ERA = 20
+
+# I/O DIRECTORY
+
+# gets the location of the .py file (also where input .csv files should be)
+IO_DIRECTORY = Path(os.path.dirname(__file__))
+
+# use pathlib Path object to convert slashes for
+# the current operating system
+INPUT_CSV_FILENAME = IO_DIRECTORY / INPUT_CSV_FILENAME
+
+if REQUIRED_SUBGROUP_CSV_FILENAME is not None:
+    REQUIRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY / REQUIRED_SUBGROUP_CSV_FILENAME
+
+if PREFERRED_SUBGROUP_CSV_FILENAME is not None:
+    PREFERRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY / PREFERRED_SUBGROUP_CSV_FILENAME
+>>>>>>> Stashed changes
 
 class Student:
     """
@@ -206,11 +286,11 @@ class Schedule:
         (default value is 4)
     half_class_maximum : int
         the target maximum size of a partition when dividing students 
-        into two subgroups of roughtly equal size
+        into two cohorts of roughtly equal size
         (default value is 15)
     quarter_class_maximum : int
         the target maximum size of a partition when dividing students
-        into four subgroups of roughly equal size
+        into four cohorts of roughly equal size
         (default value is 9)
     student_list : list
         an ordered list of student objects, where each student object
@@ -246,7 +326,7 @@ class Schedule:
         a .csv file        
     load_partition(letter_list)
         load a list of letter assignments into the letter attribute
-        for each subgroup of student objects in Schedule.required_subgroups_list
+        for each cohort of student objects in Schedule.required_subgroups_list
     write_student_assignments()
         write a report of final student assignments in .csv format
     write_course_analysis()
@@ -275,11 +355,11 @@ class Schedule:
             (default value is 4)
         half_class_maximum : int
             the target maximum size of a partition when dividing students 
-            into two subgroups of roughtly equal size
+            into two cohorts of roughtly equal size
             (default value is 15)
         quarter_class_maximum : int
             the target maximum size of a partition when dividing students
-            into four subgroups of roughly equal size
+            into four cohorts of roughly equal size
             (default value is 9)
         """
         self.number_of_partitions = number_of_partitions
@@ -762,7 +842,7 @@ class Schedule:
         None
         """
         # the file name and location for the student assignment report:
-        output_file = IO_DIRECTORY + 'student_assignments.csv' 
+        output_file = IO_DIRECTORY / 'student_assignments.csv' 
         
         with open(output_file, 'w') as file:
             # write the headers of the .csv
@@ -812,7 +892,7 @@ class Schedule:
         This example says that the class in Rm 254 during 5th hour has
         24 students, with 6 A's, 6 B's, 6 C's, 6 D's, each comprising 25% of the
         total course roster. This course is in compliance with physical distancing 
-        requirements since each A/B/C/D subgroup is self.quarter_class_maximum (9)
+        requirements since each A/B/C/D cohort is self.quarter_class_maximum (9)
         or fewer students.
         
         Example data #2:
@@ -831,7 +911,7 @@ class Schedule:
         None
         """
         # the file name and location for the course analysis report:
-        output_file = IO_DIRECTORY + 'course_analysis.csv' 
+        output_file = IO_DIRECTORY / 'course_analysis.csv' 
         
         # if number_of_partitions is not 2 or 4, you will have to 
         # implement your own analysis
@@ -1365,7 +1445,9 @@ class IndividualPartition(Schedule):
     fitness: tuple
         a tuple representing the fitness of the partition in the form:
         (weighted_fitness_score, penalty_count, good_score, other_score, number_of_courses)
-        
+    
+    student_letter_list : list
+        either ["A", "B"] or ["A", "B", "C", "D"]    
     
     Methods
     -------
@@ -1389,6 +1471,12 @@ class IndividualPartition(Schedule):
         """
         self.schedule_obj = schedule_obj
         self.number_of_partitions = schedule_obj.number_of_partitions
+        
+        if self.number_of_partitions == 2:
+            self.student_letter_list = ["A", "B"]
+        elif self.number_of_partitions == 4:
+            self.student_letter_list = ["A", "B", "C", "D"]
+                
         self.partition = None
         self.fitness = None
 
@@ -1409,7 +1497,7 @@ class IndividualPartition(Schedule):
 
         # populate the list, ex: ["A", "A", "C", "B", "D", "A", ...] 
         for _ in range(number_of_subgroups):
-            letter = random.choice(STUDENT_LETTER_LIST)
+            letter = random.choice(self.student_letter_list)
             student_partition_list.append(letter)        
         
         # store the list in the self.partition attribute
@@ -1454,6 +1542,9 @@ class Population(IndividualPartition):
     number_of_partitions: int
         inherited from the IndividualSchedule class
     
+    student_letter_list : list
+            either ["A", "B"] or ["A", "B", "C", "D"]
+    
     Methods
     -------
     generate_individual()
@@ -1485,6 +1576,7 @@ class Population(IndividualPartition):
         self.population = []
         self.sorted_scored_population = []
         self.number_of_partitions = individual_partition_obj.number_of_partitions
+        self.student_letter_list = individual_partition_obj.student_letter_list
 
     def generate_individual(self):
         """
@@ -1556,7 +1648,9 @@ class GeneticAlgorithm(Population):
         this is a list in the form [(score1, population1), (score2, population2), ...]
     number_of_partitions: int
         inherited from the Population class
-    
+    student_letter_list : list
+        either ["A", "B"] or ["A", "B", "C", "D"]   
+        
     Methods
     -------
     mutate(individual_partition)
@@ -1595,7 +1689,8 @@ class GeneticAlgorithm(Population):
         self.current_generation = [(population[0],population[1][:]) for population in population_obj.sorted_scored_population]
         self.next_generation = None
         self.number_of_partitions = population_obj.number_of_partitions
-    
+        self.student_letter_list = population_obj.student_letter_list
+        
     def mutate(self, individual_partition):
         """
         A method to mutate children based on a specified mutation rate
@@ -1624,7 +1719,7 @@ class GeneticAlgorithm(Population):
                 # for example, if letter = "A" and 
                 # STUDENT_LETTER_LIST = ["A","B","C","D"], then
                 # intersected_list = ["B","C","D"]
-                intersected_list = [element for element in STUDENT_LETTER_LIST if element != letter]
+                intersected_list = [element for element in self.student_letter_list if element is not letter]
                 
                 # mutated letter is a random selection from
                 # intersected_list:
@@ -1805,7 +1900,22 @@ class GeneticAlgorithm(Population):
         
         return self.population_obj.sorted_scored_population
 
+<<<<<<< Updated upstream
 def run_loop(student_csv_path, required_subgroups_csv_path, preferred_subgroups_csv_path, number_of_partitions, half_class_maximum, quarter_class_maximum, pop_size, rate_of_mutation, max_gen, max_time):
+=======
+def run_era(student_csv_path, 
+            required_subgroups_csv_path, 
+            preferred_subgroups_csv_path, 
+            number_of_partitions, 
+            half_class_maximum, 
+            quarter_class_maximum, 
+            pop_size, 
+            rate_of_mutation, 
+            max_era, 
+            max_gen, 
+            out_queue, 
+            in_queue):
+>>>>>>> Stashed changes
     """
     Repeat the Genetic Algorithm based on a specified number of generations (or time limit)
                 
@@ -1831,14 +1941,6 @@ def run_loop(student_csv_path, required_subgroups_csv_path, preferred_subgroups_
     max_time: int
         the maximum number of minutes to run the algorithm
     """     
-    # if you open a .csv report in Microsoft Excel and leave it open,
-    # this program will throw a PermissionError when it tries to write
-    # the new .csv report
-    #
-    # this warning is to remind you to close these .csv files before this
-    # happens
-    #
-    warnings.warn("To avoid permission errors, close any output files you may have left open from previous runs.")
     
     # initializer the timer to 0
     timer_total = 0
@@ -1900,7 +2002,7 @@ def run_loop(student_csv_path, required_subgroups_csv_path, preferred_subgroups_
     # Print progress & write to the progress log:
     print(progress_string)
 
-    progress_file = IO_DIRECTORY + 'progress_log.txt'    
+    progress_file = IO_DIRECTORY / 'progress_log.txt'    
     with open(progress_file, 'w') as file:
         file.write(progress_string)
         file.write("\n")   
@@ -1946,7 +2048,127 @@ def run_loop(student_csv_path, required_subgroups_csv_path, preferred_subgroups_
         if generation_number % 100 == 0:
             intermediate_partition = previous_population[0][1]
     
+<<<<<<< Updated upstream
             load_schedule.load_partition(intermediate_partition)
+=======
+        Example representation:    [ ["A", "C", "B"], ["B", "A", "C"], ["C", 'C", "A"], ...]
+
+    This would mean that, on this island, the most successful partition we found was ["A", "C", "B"]; the
+    second most successful partition we found was ["B", "A", "C"]; and so on.
+    """
+    era_number += 1
+    result_population = []
+
+    for item in previous_population:
+        result_population.append(item[1])
+
+
+    out_queue.put(result_population)
+
+
+    # at the end of an era, write a student assignment report
+    # and a course-by-course analysis report
+    final_partition = previous_population[0][1]
+    load_schedule.load_partition(final_partition)
+    load_schedule.write_student_assignments()
+    load_schedule.write_course_analysis()
+
+
+    """
+    This island process just finished its first era, after having read in the CSV file
+    and seeding itself with a random partition.
+
+    Now, we enter a second phase: we simply wait for main() to send us a new crossbred
+    population via in_queue, then load that population into our genetic algorithm,
+    and compute another era. And so on.
+    """
+    while era_number < max_era:
+        # This is a blocking call until we receive a crossbred population from main()
+        crossbred_population = in_queue.get()
+
+        # Now that we've received a crossbred population, we start a new era
+        generation_number = 1
+
+        # Start timers for logging
+        timer_total = 0
+        start_timer = time.perf_counter()
+
+        # Load the received population into our in-memory population object
+        population.load_population(crossbred_population)
+
+        # score this initial population
+        population.population_fitness()
+        
+        # instantiate the GeneticAlgorithm object
+        first_generation = GeneticAlgorithm(population, generation_number, rate_of_mutation)
+        
+        # generate Generation #2
+        first_generation.generate_next_generation()
+        previous_population = first_generation.next_generation
+        
+
+        # track the time this process took
+        end_timer = time.perf_counter()
+        timer_total += end_timer - start_timer
+
+        
+
+        # Concatenate a string to report progress:
+        progress_string = "PID[" + process_ID_as_string + "]: "
+        progress_string += "Generation = "
+        progress_string += str(generation_number)
+        progress_string += ", Fitness = "
+        progress_string += str(previous_population[0][0][0])
+        progress_string += ", In Compliance = "
+        progress_string += str(previous_population[0][0][2])
+        progress_string += " out of "
+        progress_string += str(previous_population[0][0][-1])   
+        progress_string += ", elapsed time so far this era (sec) = " + str(timer_total)
+        
+        # Print progress & write to the progress log:
+        print(progress_string)
+
+        progress_file = IO_DIRECTORY / 'progress_log.txt'    
+        with open(progress_file, 'w') as file:
+            file.write(progress_string)
+            file.write("\n") 
+
+        # keep repeating this process until the maximum number
+        # of generations or the time limit has been reached
+        while generation_number < max_gen:
+            
+            # same process as above
+            start_timer = time.perf_counter()
+
+            generation_number += 1
+            
+            population.sorted_scored_population = previous_population
+            current_generation = GeneticAlgorithm(population, generation_number, rate_of_mutation)
+            current_generation.generate_next_generation()
+            previous_population = current_generation.next_generation
+            
+            end_timer = time.perf_counter()
+            timer_total += end_timer - start_timer
+            
+                        
+            progress_string = "PID[" + process_ID_as_string + "]: "
+            progress_string += "Generation = "
+            progress_string += str(generation_number)
+            progress_string += ", Fitness = "
+            progress_string += str(previous_population[0][0][0])
+            progress_string += ", In Compliance = "
+            progress_string += str(previous_population[0][0][2])
+            progress_string += " out of "
+            progress_string += str(previous_population[0][0][-1])
+            progress_string += ", elapsed time so far this era (sec) = " + str(timer_total)
+            
+            print(progress_string)
+
+            with open(progress_file, 'a') as file:
+                file.write(progress_string)
+                file.write("\n") 
+
+>>>>>>> Stashed changes
             
             load_schedule.write_student_assignments()
     
@@ -1958,8 +2180,42 @@ def run_loop(student_csv_path, required_subgroups_csv_path, preferred_subgroups_
             print("Generation limit reached: Ended after generation #" + str(generation_number))
     
 
+<<<<<<< Updated upstream
     # Uncomment below to track how long this took:
     print("Total runtime = " + str(timer_total))
+=======
+    for _ in range(num_reps):
+        cur_winner = min(cur_winner, random.randint(0, array_length-1))
+
+    return cur_winner
+
+
+
+
+def crossbreed_islands(island_populations, number_of_islands, number_of_tournament_reps_per_island):
+    """
+    Helper function for crossbreeding across different island populations.
+    Returns the list containing the crossbred populations.
+
+    Parameters
+    ----------
+    island_populations:
+        a list of island populations of the form [population1, population2, ...]
+        each population is of the form [partition1, partition2, ...]
+        each partition is of the form ["A", "C", ...]
+
+        putting all this together, island_populations is of the form:
+        [ [["A", "B", ...], ["B", "C", ...], ...],      <-- population1
+          [["C", "B", ...], ["A", "A", ...], ...],      <-- population2
+          ...                                    ,      <-- population3
+          ...
+        ]    
+
+    """    
+    
+    # each population keeps the top 25% elites
+    num_elites = len(island_populations[0])//4
+>>>>>>> Stashed changes
 
     # at the end of the algorithm, write a student assignment report
     # and a course-by-course analysis report
@@ -1969,11 +2225,152 @@ def run_loop(student_csv_path, required_subgroups_csv_path, preferred_subgroups_
     
     load_schedule.write_student_assignments()
     
+<<<<<<< Updated upstream
     load_schedule.write_course_analysis()
+=======
+    # the last group will be composed of whatever space is left over:
+    remainder = len(island_populations[0]) - num_elites - (num_children)*(number_of_islands - 2)
+
+    # for each island:
+    for i in range(number_of_islands):
+        # the crossed population (that currently only has elites)
+        crossed_pop = crossed_populations[i]
+        
+        # the first population to cross with: 
+        first_pop = island_populations[i]
+        
+        # the indices of the remaining populations to cross with:
+        other_indices = [n for n in range(number_of_islands)]
+        other_indices.remove(i)
+        
+        # for each index (except the last):
+        for index in other_indices[:-1]:
+            # get the second population for crossing
+            second_pop = island_populations[index]
+            
+            # cross the two islands and add the children to cross_pop 
+            # (the number of children added will = num_children)
+            crossed_pop.extend(get_crossed_children(first_pop, second_pop, num_children, number_of_tournament_reps_per_island))
+        
+        # cross with the last island and add the children to cross_pop
+        # (this time, the number of children added will = remainder)
+        crossed_pop.extend(get_crossed_children(first_pop, island_populations[-1], remainder, number_of_tournament_reps_per_island))
+
+    # return the list of crossed populations
+    return crossed_populations
+
+
+
+>>>>>>> Stashed changes
 
 # a possible target for using the multiprocessing module:     
 def main():
+<<<<<<< Updated upstream
     run_loop(INPUT_CSV_FILENAME, REQUIRED_SUBGROUP_CSV_FILENAME, PREFERRED_SUBGROUP_CSV_FILENAME, NUMBER_OF_PARTITIONS, HALF_CLASS_MAXIMUM, QUARTER_CLASS_MAXIMUM, POPULATION_SIZE, MUTATION_RATE, NUMBER_OF_GENERATIONS, TIME_LIMIT)
+=======
+    """
+    In order to take advantage of multiple cores, main() works as follows:
+        1. Launch NUMBER_OF_PROCESSES processes, each of which runs an instance of the run_era() function.
+           You can think of this as the genetic algorithm working on N separate islands.
+        2. After running the genetic algorithm for NUMBER_OF_GENERATIONS_PER_ERA generations, these processes
+           each report their population back to main().
+        3. We have just completed an "era". We now start the next era by crossbreeding these populations
+           and then feeding the crossbred population back to each island (process), so that each island can
+           go off and run the genetic algorithm for another era in isolation before reporting back, etc.
+    """
+    # if you open a .csv report in Microsoft Excel and leave it open,
+    # this program will throw a PermissionError when it tries to write
+    # the new .csv report
+    #
+    # this warning is to remind you to close these .csv files before this
+    # happens
+    #
+    warnings.warn("To avoid permission errors, close any output files you may have left open from previous runs.")
+
+    # The "island" processes report back to main() by putting their population into this threadsafe queue
+    island_population_queue = multiprocessing.Queue()
+
+    # main() can then send the crossbred populations back to the "island" processes via this threadsafe queue
+    crossbred_population_queue = multiprocessing.Queue()
+
+    # store the processes that we launch in a list
+    island_processes = []
+
+    # instantiate NUMBER_OF_PROCESSES island processes, each of which will execute run_era()
+    for _ in range(0, NUMBER_OF_PROCESSES):
+        p = multiprocessing.Process(target=run_era, args=(INPUT_CSV_FILENAME,
+                                                          REQUIRED_SUBGROUP_CSV_FILENAME,
+                                                          PREFERRED_SUBGROUP_CSV_FILENAME,
+                                                          NUMBER_OF_PARTITIONS,
+                                                          HALF_CLASS_MAXIMUM,
+                                                          QUARTER_CLASS_MAXIMUM,
+                                                          POPULATION_SIZE,
+                                                          MUTATION_RATE,
+                                                          NUMBER_OF_ERAS,
+                                                          NUMBER_OF_GENERATIONS_PER_ERA,
+                                                          island_population_queue,
+                                                          crossbred_population_queue))
+        island_processes.append(p)
+
+
+    # start the processes
+    for p in island_processes:
+        p.start()
+
+
+
+    # timers for logging
+    start_timer = end_timer = total_time = 0
+    
+    # number of eras we've completed
+    era_number = 0
+
+
+    # one iteration through this loop represents one era
+    while total_time < 60*TIME_LIMIT and era_number < NUMBER_OF_ERAS:
+        # we will time how long this era takes us
+        start_timer = time.perf_counter()
+
+        # each island will send us their population - store all of them in this list
+        island_populations = []
+
+        # get() is blocking, so the main() process will spend most of its
+        # time waiting here for all of the islands to report back
+        for i in range(NUMBER_OF_PROCESSES):
+            island_populations.append(island_population_queue.get())
+
+
+        # now that we have a population from each island, crossbreed
+        # both the input (island_populations) and the output (crossed_populations)
+        # is represented as a list of populations
+        crossed_populations = crossbreed_islands(island_populations, NUMBER_OF_PROCESSES, NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND)
+
+
+        # send this crossed population back to the island process via crossbred_population_queue
+        # (each island process is constantly checking this queue for a crossbred population,
+        #  and once it is able to pop one off, starts computing the new era using that initial population)
+        for item in crossed_populations:
+            crossbred_population_queue.put(item)
+
+
+        # we're done with this era
+        era_number += 1
+
+        # log time elapsed
+        end_timer = time.perf_counter()
+        total_time += (end_timer - start_timer)
+        print("Just completed era #" + str(era_number) + " in " + str(round(end_timer - start_timer, 3)) + "sec")
+        print("Total elapsed time: " + str(round(total_time/60, 2)) + " min")
+
+
+
+    # wait for all processes to exit
+    for p in island_processes:
+        p.join()
+
+
+
+>>>>>>> Stashed changes
 
 if __name__ == "__main__":
     main()
