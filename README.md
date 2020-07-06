@@ -1,4 +1,4 @@
-### New in this Version
+## New in this Version
 
 **Multiprocessing:** This version uses a parallel genetic algorithm to obtain significantly better results.
 
