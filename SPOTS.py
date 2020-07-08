@@ -69,7 +69,7 @@ PREFERRED_SUBGROUP_CSV_FILENAME = None
 # studentpartitionoptimizer@gmail.com so I can verify and make these the 
 # new defaults. 
 
-# number of processes to launch
+# number of processes to launch (must be >= 4)
 NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
 
 # for the tournament selection when crossbreeding across islands,
@@ -1717,6 +1717,57 @@ class GeneticAlgorithm(Population):
         
         # return the mutated partition
         return new_partition
+
+    @classmethod
+    def get_children_pair(cls, parent1, parent2):
+        """
+        a given pair of parents create 2 new children:
+            1. child1 starts off as a clone of parent1, just as child2 starts off as a clone of parent2.
+            2. these 2 clones then have an opportunity to swap some genes (individual student letter assignments).
+               this happens by selecting a random [relatively small] subset of itself (i.e. a set of indices), and 
+               having child1 and child2 swap their letters at these indices.
+
+               the idea is that each parent might have found a successful schedule of a small "chunk" of students
+               that the other parent did not find yet (or was not successful in that overall environment), and this
+               is a way to inject those small "local" changes (local in the sense that it is an improvement that can
+               be made to a small cohort of students that doesn't really affect those outside of this cohort).
+            3. so whenever we take a parent from island1 to cross it with a parent from island2, the original population
+               [of island1] gets 2 children: one that is a near-clone of parent1 (and island1 native), and another one
+               that is a near-clone of parent2 (a foreigner from island2)
+
+        ****
+        
+        Parameters
+        ----------
+        parent1:
+            list of letters representing parent1 (the partition)
+
+        parent2:
+            list of letters representing parent1 (the partition)
+
+        """    
+
+        genome_length = min(len(parent1), len(parent2))
+
+        # child1 and child2 start off as clones of their respective parents
+        child1 = parent1[:]
+        child2 = parent2[:]
+
+        # size of cohort to inject, i.e. number of letters to replace in the partition
+        # this is purely based on [what seems right to me] based on some limited experimentation
+        # far from finalized, please feel free to play around with the parameters
+        # some small number (such as between 10 and 40) seems to work best
+        injection_size = random.randint(10,30)
+
+        # choose injection_size random indexes which will get the other parent's genes
+        for _ in range(injection_size):
+            # choose 
+            rand_index = random.randint(0, genome_length-1)
+            temp = child1[rand_index]
+            child1[rand_index] = child2[rand_index]
+            child2[rand_index] = temp
+
+        return child1, child2
     
     def children(self, parent1, parent2):
         """
@@ -1742,7 +1793,7 @@ class GeneticAlgorithm(Population):
 
 
         # one pair of parents produce one pair of children
-        child1, child2 = get_children_pair(parent1, parent2)
+        child1, child2 = self.get_children_pair(parent1, parent2)
 
 
         # mutate:
@@ -1751,6 +1802,34 @@ class GeneticAlgorithm(Population):
         
         # return the children as a tuple:
         return mutated_child1, mutated_child2
+
+    @classmethod
+    def tournament_winner_index(cls, array_length, num_reps):
+        """
+        Helper function. Uses tournament selection with num_reps representatives to 
+        select an index for an array of length array_length.
+
+        Source (tournament selection): https://en.wikipedia.org/wiki/Tournament_selection
+
+        Parameters
+        ----------
+        array_length: int
+            the length of the array for which we are using tournament selection
+
+        num_reps: int
+            number of representatives to use for tournament selection
+
+        """    
+        
+        # our population is stored in descending order, so start off by assuming
+        # we have the worst possible index, then we get num_reps tries
+        # to improve upon (i.e. to minimize) this value
+        cur_winner = array_length
+
+        for _ in range(num_reps):
+            cur_winner = min(cur_winner, random.randint(0, array_length-1))
+
+        return cur_winner
 
     def run_tournament(self, scored_population):
         """
@@ -1779,10 +1858,10 @@ class GeneticAlgorithm(Population):
 
         # select the two parents using tournament selection
         # the number 4 is somewhat arbitrary, but seems to work well in practice
-        parent1_index = tournament_winner_index(scored_population_length, number_of_tournament_reps_per_population)
+        parent1_index = self.tournament_winner_index(scored_population_length, number_of_tournament_reps_per_population)
         parent1 = list(scored_population[parent1_index])
         
-        parent2_index = tournament_winner_index(scored_population_length, number_of_tournament_reps_per_population)
+        parent2_index = self.tournament_winner_index(scored_population_length, number_of_tournament_reps_per_population)
         parent2 = list(scored_population[parent2_index])
         
         # return the parents as a tuple:
@@ -2144,28 +2223,15 @@ def run_era(student_csv_path,
         end_timer = time.perf_counter()
         timer_total += end_timer - start_timer
 
+        # get algorithm progress
+        progress = return_progress(process_ID_as_string, generation_number, previous_population, timer_total)
         
-
-        # Concatenate a string to report progress:
-        progress_string = "PID[" + process_ID_as_string + "]: "
-        progress_string += "Generation = "
-        progress_string += str(generation_number)
-        progress_string += ", Fitness = "
-        progress_string += str(previous_population[0][0][0])
-        progress_string += ", In Compliance = "
-        progress_string += str(previous_population[0][0][2])
-        progress_string += " out of "
-        progress_string += str(previous_population[0][0][-1])   
-        progress_string += ", elapsed time so far this era (sec) = " + str(timer_total)
+        # print algorithm progress
+        print(progress)
         
-        # Print progress & write to the progress log:
-        print(progress_string)
-
-        progress_file = IO_DIRECTORY / 'progress_log.txt'    
-        with open(progress_file, 'w') as file:
-            file.write(progress_string)
-            file.write("\n") 
-
+        # write algorithm progress to file   
+        write_progress(IO_DIRECTORY, progress, 'a')
+       
         # keep repeating this process until the maximum number
         # of generations or the time limit has been reached
         while generation_number < max_gen:
@@ -2183,24 +2249,14 @@ def run_era(student_csv_path,
             end_timer = time.perf_counter()
             timer_total += end_timer - start_timer
             
-                        
-            progress_string = "PID[" + process_ID_as_string + "]: "
-            progress_string += "Generation = "
-            progress_string += str(generation_number)
-            progress_string += ", Fitness = "
-            progress_string += str(previous_population[0][0][0])
-            progress_string += ", In Compliance = "
-            progress_string += str(previous_population[0][0][2])
-            progress_string += " out of "
-            progress_string += str(previous_population[0][0][-1])
-            progress_string += ", elapsed time so far this era (sec) = " + str(timer_total)
+            # get algorithm progress
+            progress = return_progress(process_ID_as_string, generation_number, previous_population, timer_total)
             
-            print(progress_string)
-
-            with open(progress_file, 'a') as file:
-                file.write(progress_string)
-                file.write("\n") 
-
+            # print algorithm progress
+            print(progress)
+            
+            # write algorithm progress to file   
+            write_progress(IO_DIRECTORY, progress, 'a')                        
             
         # Send population back to main()
         result_population = []
@@ -2260,17 +2316,17 @@ def get_crossed_children(population1, population2, num_children, num_tournament_
     for _ in range(num_children//2):
         # select the two parents using tournament selection
         # the number 4 is somewhat arbitrary, but seems to work well in practice
-        parent1_index = tournament_winner_index(population_size, num_tournament_reps)
+        parent1_index = GeneticAlgorithm.tournament_winner_index(population_size, num_tournament_reps)
         parent1 = population1[parent1_index]
         
-        parent2_index = tournament_winner_index(population_size, num_tournament_reps)
+        parent2_index = GeneticAlgorithm.tournament_winner_index(population_size, num_tournament_reps)
         parent2 = population2[parent2_index]
         
         # length of a partition
         genome_length = len(parent1)
  
         # a pair of parents generates a pair of children
-        child1, child2 = get_children_pair(parent1, parent2)
+        child1, child2 = GeneticAlgorithm.get_children_pair(parent1, parent2)
 
         # add the pair of children to the output list
         crossed_children_list.append(child1)
@@ -2283,87 +2339,6 @@ def get_crossed_children(population1, population2, num_children, num_tournament_
             crossed_children_list = crossed_children_list[0:-1]
 
     return crossed_children_list
-
-def get_children_pair(parent1, parent2):
-    """
-    a given pair of parents create 2 new children:
-        1. child1 starts off as a clone of parent1, just as child2 starts off as a clone of parent2.
-        2. these 2 clones then have an opportunity to swap some genes (individual student letter assignments).
-           this happens by selecting a random [relatively small] subset of itself (i.e. a set of indices), and 
-           having child1 and child2 swap their letters at these indices.
-
-           the idea is that each parent might have found a successful schedule of a small "chunk" of students
-           that the other parent did not find yet (or was not successful in that overall environment), and this
-           is a way to inject those small "local" changes (local in the sense that it is an improvement that can
-           be made to a small cohort of students that doesn't really affect those outside of this cohort).
-        3. so whenever we take a parent from island1 to cross it with a parent from island2, the original population
-           [of island1] gets 2 children: one that is a near-clone of parent1 (and island1 native), and another one
-           that is a near-clone of parent2 (a foreigner from island2)
-
-    ****
-
-    I HAVE NO IDEA IF THIS "SHOULD" WORK OR WHAT... it's just what I came up with from "thinking about it",
-    and it seems to yield some improvements in my testing. if you find an improvement, that's even better!
-
-
-    Parameters
-    ----------
-    parent1:
-        list of letters representing parent1 (the partition)
-
-    parent2:
-        list of letters representing parent1 (the partition)
-
-    """    
-
-    genome_length = min(len(parent1), len(parent2))
-
-    # child1 and child2 start off as clones of their respective parents
-    child1 = parent1[:]
-    child2 = parent2[:]
-
-    # size of cohort to inject, i.e. number of letters to replace in the partition
-    # this is purely based on [what seems right to me] based on some limited experimentation
-    # far from finalized, please feel free to play around with the parameters
-    # some small number (such as between 10 and 40) seems to work best
-    injection_size = random.randint(10,30)
-
-    # choose injection_size random indexes which will get the other parent's genes
-    for _ in range(injection_size):
-        # choose 
-        rand_index = random.randint(0, genome_length-1)
-        temp = child1[rand_index]
-        child1[rand_index] = child2[rand_index]
-        child2[rand_index] = temp
-
-    return child1, child2
-
-def tournament_winner_index(array_length, num_reps):
-    """
-    Helper function. Uses tournament selection with num_reps representatives to 
-    select an index for an array of length array_length.
-
-    Source (tournament selection): https://en.wikipedia.org/wiki/Tournament_selection
-
-    Parameters
-    ----------
-    array_length: int
-        the length of the array for which we are using tournament selection
-
-    num_reps: int
-        number of representatives to use for tournament selection
-
-    """    
-    
-    # our population is stored in descending order, so start off by assuming
-    # we have the worst possible index, then we get num_reps tries
-    # to improve upon (i.e. to minimize) this value
-    cur_winner = array_length
-
-    for _ in range(num_reps):
-        cur_winner = min(cur_winner, random.randint(0, array_length-1))
-
-    return cur_winner
 
 def crossbreed_islands(island_populations, number_of_islands, number_of_tournament_reps_per_island):
     """

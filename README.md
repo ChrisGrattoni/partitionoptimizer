@@ -5,7 +5,7 @@
 **Sibling support:** Assign siblings (or any specified student subgroups) to the same cohort.
 
 # Student Partition Optimization Tool for Schools (SPOTS)
-State governments and public health agencies have begun recommending that schools implement "Physically Distanced Learning," with a student/teacher ratio of 10/1 or fewer in each classroom. At most schools, this will require rotating groups of students into the school building while other students stay home and learn remotely. This project aims to help schools assign students to an A/B/C/D group in a manner that allows physical distancing in as many classrooms as possible. 
+State governments and public health agencies have begun recommending that schools implement "Physically Distanced Learning," with a student/teacher ratio of 10/1 or fewer in each classroom. At most schools, this will require rotating cohorts of students into the school building while other students stay home and learn remotely. This project aims to help schools assign students to smaller cohorts in a manner that allows physical distancing in as many classrooms as possible. 
 
 Video introduction: https://youtu.be/XJFvY4-FCSc
 
@@ -18,14 +18,14 @@ The Student Partition Optimization Tool for Schools uses a genetic algorithm to 
    - No more than 9 B's
    - No more than 9 C's
    - No more than 9 D's
-2. No more than 15 students when combining the A- and B-groups
-3. No more than 15 students when combining the C- and D-groups
+2. No more than 15 students when combining the A- and B-cohorts
+3. No more than 15 students when combining the C- and D-cohorts
 
-This allows schools some flexibility if they have to rotate students in and out of the building. If a school can have no more than 10 people in a classroom (9 students and 1 teacher), then the school can rotate through the A/B/C/D groups one at a time. If a school needs to run each classroom at approximately 50% capacity, they can bring in the A- and B-groups together, and then bring in the C- and D-groups together. 
+This allows schools some flexibility if they have to rotate students in and out of the building. If a school can have no more than 10 people in a classroom (9 students and 1 teacher), then the school can rotate through the A/B/C/D cohorts one at a time. If a school needs to run each classroom at approximately 50% capacity, they can bring in the A- and B-cohorts together, and then bring in the C- and D-cohorts together. 
 
-For courses that are not initially "In Compliance," the algorithm attempts to balance the distribution of students in the A/B/C/D groups, as well as the distribution of students in the (A+B) and (C+D) groups. 
+For courses that are not initially "In Compliance," the algorithm attempts to balance the distribution of students in the A/B/C/D cohorts, as well as the distribution of students in the (A+B) and (C+D) cohorts. 
 
-If a school has a different set of requirements than a maximum of 9 students in A/B/C/D groups and 15 students in (A+B) and (C+D) groups, then the fitness function in SPOTS.py can easily be modified to accommodate this. 
+If a school has a different set of requirements than a maximum of 9 students in A/B/C/D cohorts and 15 students in (A+B) and (C+D) cohorts, then the fitness function in SPOTS.py can easily be modified to accommodate this. 
 
 **Important:** A genetic algorithm is an optimization technique whose results improve with additional computation. You may want to let this program work for 8 hours or more to obtain desirable results.
 
@@ -35,7 +35,7 @@ Python 3.8 (https://www.python.org/downloads/)
 
 ### Getting Started (Example Data)
 
-To try this program with the provided example data, all you need to do is make sure that SPOTS.py and example_student_data.csv are in the same folder together. When the program terminates, the parent directory of SPOTS.py will contain two two final reports (student_assignments.csv and course_analysis.csv).
+To try this program with the provided example data, all you need to do is make sure that SPOTS.py and example_student_data.csv are in the same folder together. When the program terminates, the parent directory of SPOTS.py will contain two final reports (student_assignments.csv and course_analysis.csv).
 
 After you have the program working with example data, you can try data from your own school. 
 
@@ -65,15 +65,15 @@ Once you have generated this .csv file, you will have to edit SPOTS.py to indica
 		
 Next, if your school is implementing an A/B partition (2 cohorts of students), set NUMBER_OF_PARTITIONS = 2. For an A/B/C/D partition (4 cohorts of students), leave the default value of NUMBER_OF_PARTITIONS = 4. You will have to add to this project for a partition size other than 2 or 4:
 
-		# number of groups to partition students into (only 2 and 4 are implemented)
+		# number of cohorts to partition students into (only 2 and 4 are implemented)
 		NUMBER_OF_PARTITIONS = 4
 
-You can also modify the desired size of the letter partition in each classroom. By default, the program will try to assign no more than 9 students of each letter (A/B/C/D) and 15 students in the paired groups ((A + B) and (C + D)). Here is where to make these changes:
+You can also modify the desired size of the letter partition in each classroom. By default, the program will try to assign no more than 9 students of each letter (A/B/C/D) and 15 students in the paired cohorts ((A + B) and (C + D)). Here is where to make these changes:
 
-		# max size of a partition when dividing students into two subgroups (default = 15) 
+		# max size of a partition when dividing students into two cohorts (default = 15) 
 		HALF_CLASS_MAXIMUM = 15 
 
-		# max size of a partition when dividing students into four subgroups (default = 9)
+		# max size of a partition when dividing students into four cohorts (default = 9)
 		QUARTER_CLASS_MAXIMUM = 9
 
 After making these changes, you are ready to try the program out on real data. 
@@ -120,7 +120,7 @@ Finally, a genetic algorithm is only as good as its fitness function. If you rea
 
 ### Final Output 
 
-As the algorithm runs, it will append results to the file progress_log.txt. You can check this file to watch the progress of the algorithm. Because the first generation in this algorithm assigns students to A/B/C/D groups randomly, early generations will have a low fitness score and a limited number of courses that are rated as "In Compliance." These early generations are similar to the quality of partitions that a human could generate by hand. You should notice a significant jump in the number of "In Compliance" courses for later generations.   
+As the algorithm runs, it will append results to the file progress_log.txt. You can check this file to watch the progress of the algorithm. Because the first generation in this algorithm assigns students to A/B/C/D cohorts randomly, early generations will have a low fitness score and a limited number of courses that are rated as "In Compliance." These early generations are similar to the quality of partitions that a human could generate by hand. You should notice a significant jump in the number of "In Compliance" courses for later generations.   
 
 This program will also generate two final reports at the end of the algorithm: student_assignments.csv and course_analysis.csv. The student_assignments report is self-explanatory:
 
@@ -128,11 +128,11 @@ This program will also generate two final reports at the end of the algorithm: s
 		0291817791, Abel, Niels, Henrik, D
 		0999023822, John, Mikey, Norman, A
 
-It is just a list of students and the A/B/C/D groups to which they have been assigned. The course_analysis report is meant to analyze the final results of these particular A/B/C/D assignments. You may consider sorting by "In Compliance" to locate all courses that have been reported as "No." 
+It is just a list of students and the A/B/C/D cohorts to which they have been assigned. The course_analysis report is meant to analyze the final results of these particular A/B/C/D assignments. You may consider sorting by "In Compliance" to locate all courses that have been reported as "No." 
 
 Some of these courses will not be "In Compliance" because they are simply too large. This program defines a course as "In Compliance" if it has no more than 9 students to the A-group, 9 students to the B-group, 9 students to the C-group, and 9 students to the D-group. This is impossible if the course has 40 students in it. 
 
-Other courses will not be "In Compliance" because they have an imbalance in the size of the A/B/C/D groups that is too large. You can identify these courses by looking for a large value of "Max Deviation" (as well as "In Compliance" = "No"). Sometimes, it will be possible to get some of these course to be "In Compliance" by running the algorithm longer (or running on a few machines and selecting the best results). However, schedule optimization is well known to be a difficult problem, and it is not realistic to expect 100% of courses achieving a rating of "In Compliance." 
+Other courses will not be "In Compliance" because they have an imbalance in the size of the A/B/C/D cohorts that is too large. You can identify these courses by looking for a large value of "Max Deviation" (as well as "In Compliance" = "No"). Sometimes, it will be possible to get some of these course to be "In Compliance" by running the algorithm longer (or running on a few machines and selecting the best results). However, schedule optimization is well known to be a difficult problem, and it is not realistic to expect 100% of courses achieving a rating of "In Compliance." 
 
 _Note:_ This output report is still under development, particularly how to classify a course as "In Compliance." 
 
