@@ -550,7 +550,6 @@ class Schedule:
                     self.preferred_subgroups_list = temp_subgroups_list
                 else: 
                     raise NameError('Subgroups must either be "required" or "preferred"')
-                
                     
     def students_from_csv(self, file_location):
         """
@@ -770,6 +769,7 @@ class Schedule:
             for student in student_subgroup:
                 student.letter = letter
 
+    # possibly move to Reports class
     def write_student_assignments(self):
         """
         A method to write a report of final student assignments in .csv format
@@ -820,6 +820,7 @@ class Schedule:
     # elif NUMBER_OF_PARTITIONS == 4:
     #   STUDENT_LETTER_LIST = ["A", "B", "C", "D"]
     
+    # possibly move to Reports class
     def write_course_analysis(self):
         """
         A method to write an report of the letter breakdown in each classroom
@@ -1642,6 +1643,7 @@ class GeneticAlgorithm(Population):
     run_tournament(scored_population)
         select two parents from the population using Tournament Selection
     generate_next_generation()
+        use self.current_generation to generate self.next_generation
     """
     
     def __init__(self, population_obj, generation_number, mutation_rate = 0.01):
@@ -1730,7 +1732,7 @@ class GeneticAlgorithm(Population):
                the idea is that each parent might have found a successful schedule of a small "chunk" of students
                that the other parent did not find yet (or was not successful in that overall environment), and this
                is a way to inject those small "local" changes (local in the sense that it is an improvement that can
-               be made to a small cohort of students that doesn't really affect those outside of this cohort).
+               be made to a small subset of students that doesn't really affect those outside of this subset).
             3. so whenever we take a parent from island1 to cross it with a parent from island2, the original population
                [of island1] gets 2 children: one that is a near-clone of parent1 (and island1 native), and another one
                that is a near-clone of parent2 (a foreigner from island2)
@@ -1943,330 +1945,338 @@ class GeneticAlgorithm(Population):
         
         return self.population_obj.sorted_scored_population
 
-def return_progress(pid_string, generation_number, population, time):
+class Reports:
     """
-    Concatenate a string to report progress of the algorithm
+    A class for generating reports/visualizations of the algorithm's progress
     
-    Parameters
+    Attributes
     ----------
-    pid_string: string
-        process ID string
-
-    generation_number: int
-        the current generation number
+    None
         
-    population : nested list
-        a sorted, scored population, from which we will be extracting
-        a fitness score
-        
-    time : time object
-        the time elapsed
-
-    """    
-    # Concatenate a string to report progress:
-    progress_string = "PID(" + pid_string + "):"
-    progress_string += "Generation = "
-    progress_string += str(generation_number)
-    progress_string += ", Fitness = "
-    progress_string += str(population[0][0][0])
-    progress_string += ", In Compliance = "
-    progress_string += str(population[0][0][2])
-    progress_string += " out of "
-    progress_string += str(population[0][0][-1])   
-    progress_string += ", elapsed time so far this era (sec) = " + str(time)
-
-    return progress_string
-
-def write_progress(path, progress_string, write_or_append):
+    Methods
+    -------
+    return_progress(cls, pid_string, generation_number, population, time)
+        concatenate a string with genetic algorithm progress
+    write_progress(cls, path, progress_string, write_or_append)
+        write a progress_string to the output log
+    return_era_progress(cls, era_number, start_timer, end_timer, total_time)
+        concatenate a string with parallel genetic algorithm progress
     """
-    Write to the progress log
+
+    @classmethod
+    def return_progress(cls, pid_string, generation_number, population, time):
+        """
+        Concatenate a string to report progress of the algorithm
+        
+        Parameters
+        ----------
+        pid_string: string
+            process ID string
+
+        generation_number: int
+            the current generation number
+            
+        population : nested list
+            a sorted, scored population, from which we will be extracting
+            a fitness score
+            
+        time : time object
+            the time elapsed
+
+        """    
+        # Concatenate a string to report progress:
+        progress_string = "PID(" + pid_string + "):"
+        progress_string += "Generation = "
+        progress_string += str(generation_number)
+        progress_string += ", Fitness = "
+        progress_string += str(population[0][0][0])
+        progress_string += ", In Compliance = "
+        progress_string += str(population[0][0][2])
+        progress_string += " out of "
+        progress_string += str(population[0][0][-1])   
+        progress_string += ", elapsed time so far this era (sec) = " + str(time)
+
+        return progress_string
     
-    Parameters
+    @classmethod
+    def write_progress(cls, path, progress_string, write_or_append):
+        """
+        Write to the progress log
+        
+        Parameters
+        ----------
+        path: path object
+            the directory to write to
+
+        progress_string: string
+            the string to write
+            
+        write_or_append : string
+            use 'w' or 'a' to write over current file contents or append 
+        """  
+
+        progress_file = path / 'progress_log.txt'    
+        with open(progress_file, write_or_append) as file:
+            file.write(progress_string)
+            file.write("\n")  
+
+    @classmethod
+    def return_era_progress(cls, era_number, start_timer, end_timer, total_time):
+        """
+        Concatenate a string to report progress of the algorithm
+        
+        Parameters
+        ----------
+        pid_string: string
+            process ID string
+
+        era_number: int
+            the current era number
+        
+        start_timer : float
+            the start time of the era
+            
+        end_timer : float
+            the end time of the era
+        
+        total_time : float
+            the total time elapsed
+        """    
+
+        progress_string = "Just completed era #" + str(era_number) + " in " + str(round(end_timer - start_timer, 3)) + "sec"
+        progress_string += "\n"
+        progress_string += "Total elapsed time: " + str(round(total_time/60, 2)) + " min"
+        
+        return progress_string
+
+class ParallelGeneticAlgorithm(GeneticAlgorithm):        
+    """
+    A class that implements the parallel genetic algorithm 
+    
+    Attributes
     ----------
-    path: path object
-        the directory to write to
+    number_of_processes : int
+        number of processes to launch 
+        (default = multiprocessing.cpu_count())
+        (WARNING: must be >= 4)
+    io_directory : path object
+        gets the location of the .py file as a Path object
+        using IO_DIRECTORY = Path(os.path.dirname(__file__))  
+        (this is where .csv input files should be located)
+    student_csv_path : string 
+        filename of .csv file with student schedule data 
+        (default = "example_student_data.csv)
+    required_subgroups_csv_path : string
+        filename of .csv file with required student subgrouping data 
+        (default = "example_subgroups.csv")
+        (if not needed, use None)
+    preferred_subgroups_csv_path : string
+        filename of .csv file with preferred student subgrouping data 
+        (default = None) 
+    number_of_partitions : int
+        number of groups to partition students into 
+        (only 2 and 4 are implemented)
+    half_class_maximum : int
+        max size of a partition when dividing students into two cohorts
+        (default = 15) 
+    quarter_class_maximum : int
+        max size of a partition when dividing students into four cohorts 
+        (default = 9)
+    pop_size : int
+        the size of the population of each "island"
+        (default = 60, with a recommended range of 20 - 80)
+    rate_of_mutation : float
+        recommended range: between 0.01 and 0.05
+        (default = 0.01)
+    max_era : int
+        how many eras to run, you may want to set this number 
+        arbitrarily high and use the time_limit to decide when
+        to halt the algorithm
+    max_gen : int
+        number of generations per era
+        (default = 20, recommended range 10 - 50)
+    time_limit : float
+        time measured in minutes 
+        (default = 480 min or 8 hr)
+    number_of_tournament_reps_per_island : int
+        for the tournament selection when crossbreeding across islands,
+        the number of representatives to use
+        (default = number_of_processes//4)
 
-    progress_string: string
-        the string to write
         
-    write_or_append : string
-        use 'w' or 'a' to write over current file contents or append 
-    """  
-
-    progress_file = path / 'progress_log.txt'    
-    with open(progress_file, write_or_append) as file:
-        file.write(progress_string)
-        file.write("\n")  
-
-def return_era_progress(era_number, start_timer, end_timer, total_time):
+    Methods
+    -------
+    run_era(cls, out_queue, in_queue)
+        repeat the Genetic Algorithm based on a specified 
+        number of generations (or time limit)
+    get_crossed_children(cls, population1, population2, num_children, num_tournament_reps)
+        given two populations, this method uses tournament selection 
+        to choose a parent from each populatio
+    crossbreed_islands(cls, island_populations, number_of_islands, number_of_tournament_reps_per_island)
+        helper function for crossbreeding across different island populations
+    run_parallel(cls)
+        run multiple copies of the GA, each running on its own core (island), and 
+        then periodically crossbreed between islands
     """
-    Concatenate a string to report progress of the algorithm
-    
-    Parameters
-    ----------
-    pid_string: string
-        process ID string
 
-    era_number: int
-        the current era number
+    # class attributes (references to global variables at top of document)
+    number_of_processes = NUMBER_OF_PROCESSES
+    io_directory = IO_DIRECTORY
+    student_csv_path = INPUT_CSV_FILENAME
+    required_subgroups_csv_path = REQUIRED_SUBGROUP_CSV_FILENAME
+    preferred_subgroups_csv_path = PREFERRED_SUBGROUP_CSV_FILENAME
+    number_of_partitions = NUMBER_OF_PARTITIONS
+    half_class_maximum = HALF_CLASS_MAXIMUM
+    quarter_class_maximum = QUARTER_CLASS_MAXIMUM
+    pop_size = POPULATION_SIZE
+    rate_of_mutation = MUTATION_RATE
+    max_era = NUMBER_OF_ERAS
+    max_gen = NUMBER_OF_GENERATIONS_PER_ERA
+    time_limit = TIME_LIMIT
+    number_of_tournament_reps_per_island = NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND
     
-    start_timer : float
-        the start time of the era
+    @classmethod
+    def run_era(cls, out_queue, in_queue):
+        """
+        Repeat the Genetic Algorithm based on a specified number of generations (or time limit)
+                    
+        Parameters
+        ----------
+        student_csv_path : str
+            the location of the input.csv with student schedule data
+        required_subgroups_csv_path : str
+            the location of the input.csv with required subgrouping data
+        preferred_subgroups_csv_path : str
+            the location of the input.csv with preferred subgrouping data
+        number_of_partitions: int
+            the number of partitions to group students into
+            2 for an A/B partition
+            4 for an A/B/C/D partition
+            Note: Other values are not implemented
+        pop_size: int
+            the size of the population in the genetic algorithm
+        rate_of_mutation: float
+            the mutation rate in the genetic algorithm
+        max_era: int
+            the number of eras to run
+        max_gen: int
+            the number of generations per era to run the algorithm
+        out_queue: multiprocessing.Queue()
+            threadsafe outbound queue, used to report final population to main()
+        in_queue: multiprocessing.Queue()
+            threadsafe inbound queue, used to receive crossbred population from main()
+        """     
         
-    end_timer : float
-        the end time of the era
-    
-    total_time : float
-        the total time elapsed
-    """    
+        # this function is run by child processes that main() launches, so grab the process ID for logging purposes
+        process_ID_as_string = str(os.getpid())
 
-    progress_string = "Just completed era #" + str(era_number) + " in " + str(round(end_timer - start_timer, 3)) + "sec"
-    progress_string += "\n"
-    progress_string += "Total elapsed time: " + str(round(total_time/60, 2)) + " min"
-    
-    return progress_string
-        
-def run_era(student_csv_path, 
-            required_subgroups_csv_path, 
-            preferred_subgroups_csv_path, 
-            number_of_partitions, 
-            half_class_maximum, 
-            quarter_class_maximum, 
-            pop_size, 
-            rate_of_mutation, 
-            max_era, 
-            max_gen, 
-            out_queue, 
-            in_queue):
-    """
-    Repeat the Genetic Algorithm based on a specified number of generations (or time limit)
-                
-    Parameters
-    ----------
-    student_csv_path : str
-        the location of the input.csv with student schedule data
-    required_subgroups_csv_path : str
-        the location of the input.csv with required subgrouping data
-    preferred_subgroups_csv_path : str
-        the location of the input.csv with preferred subgrouping data
-    number_of_partitions: int
-        the number of partitions to group students into
-        2 for an A/B partition
-        4 for an A/B/C/D partition
-        Note: Other values are not implemented
-    pop_size: int
-        the size of the population in the genetic algorithm
-    rate_of_mutation: float
-        the mutation rate in the genetic algorithm
-    max_era: int
-        the number of eras to run
-    max_gen: int
-        the number of generations per era to run the algorithm
-    out_queue: multiprocessing.Queue()
-        threadsafe outbound queue, used to report final population to main()
-    in_queue: multiprocessing.Queue()
-        threadsafe inbound queue, used to receive crossbred population from main()
-    """     
-    
-    # this function is run by child processes that main() launches, so grab the process ID for logging purposes
-    process_ID_as_string = str(os.getpid())
-
-    # initializer the timer to 0
-    timer_total = 0
-    
-    # start the timer
-    start_timer = time.perf_counter()
-    
-    generation_number = 1
-    era_number = 0
-    
-    # instantiate the Schedule object
-    load_schedule = Schedule(number_of_partitions, half_class_maximum, quarter_class_maximum)
-    
-    # load school data into the Schedule object
-    load_schedule.students_from_csv(student_csv_path)
-    
-    # load required subgroups into the Schedule object
-    load_schedule.subgroups_from_csv(required_subgroups_csv_path, "required")    
-    
-    # load preferred subgroups into the Schedule object
-    load_schedule.subgroups_from_csv(preferred_subgroups_csv_path, "preferred")
-    
-    # instantiate the IndividualPartition object
-    first_partition = IndividualPartition(load_schedule)
-    
-    # instatiate the Population object
-    population = Population(first_partition, pop_size)
-    
-    # populate with random individuals for the first generation
-    population.populate()
-    
-    # score this initial population
-    population.population_fitness()
-    
-    # instantiate the GeneticAlgorithm object
-    first_generation = GeneticAlgorithm(population, generation_number, rate_of_mutation)
-    
-    # generate Generation #2
-    first_generation.generate_next_generation()
-    previous_population = first_generation.next_generation
-    
-    # track the time this process took:
-    end_timer = time.perf_counter()
-    timer_total += end_timer - start_timer
-
-    # Uncomment below to track how long this took:
-    # (This includes the initial CSV load, so it will be a bit longer than the general case)
-    # print("Benchmark result = " + str(end_timer - start_timer))
-    
-    # get algorithm progress
-    progress = return_progress(process_ID_as_string, generation_number, previous_population, timer_total)
-    
-    # print algorithm progress
-    print(progress)
-    
-    # write algorithm progress to file   
-    write_progress(IO_DIRECTORY, progress, 'a')
-
-    # keep repeating this process until the maximum number
-    # of generations or the time limit has been reached
-    while generation_number < max_gen:
-        
-        # same process as above
-        start_timer = time.perf_counter()
-        
-        generation_number += 1
-        
-        population.sorted_scored_population = previous_population
-        current_generation = GeneticAlgorithm(population, generation_number, rate_of_mutation)
-        current_generation.generate_next_generation()
-        previous_population = current_generation.next_generation
-        
-        end_timer = time.perf_counter()
-        timer_total += end_timer - start_timer
-
-        # Uncomment below to track how long this took:
-        # (This is the general case WITHOUT initial CSV load)
-        # print("Benchmark result = " + str(end_timer - start_timer))
-
-        # get algorithm progress
-        progress = return_progress(process_ID_as_string, generation_number, previous_population, timer_total)
-
-        # print algorithm progress
-        print(progress)
-        
-        # write algorithm progress to file
-        write_progress(IO_DIRECTORY, progress, 'a')
-
-    """
-    Now that this era is done, this island process must send its findings back to main(). We can
-    represent our findings as a sorted list: [partition1, partition2, ...], where partition1 is the
-    best, partition2 is second best, etc.
-    
-    Due to some limitations of Python interprocess communication, we represent each partition as a
-    list of letters rather than an actual IndividualPartition() object.
-    
-        Example representation:    [ ["A", "C", "B"], ["B", "A", "C"], ["C", 'C", "A"], ...]
-
-    This would mean that, on this island, the most successful partition we found was ["A", "C", "B"]; the
-    second most successful partition we found was ["B", "A", "C"]; and so on.
-    """
-    era_number += 1
-    result_population = []
-
-    for item in previous_population:
-        result_population.append(item[1])
-
-    out_queue.put(result_population)
-
-    # at the end of an era, write a student assignment report
-    # and a course-by-course analysis report
-    final_partition = previous_population[0][1]
-    load_schedule.load_partition(final_partition)
-    load_schedule.write_student_assignments()
-    load_schedule.write_course_analysis()
-
-    """
-    This island process just finished its first era, after having read in the CSV file
-    and seeding itself with a random partition.
-
-    Now, we enter a second phase: we simply wait for main() to send us a new crossbred
-    population via in_queue, then load that population into our genetic algorithm,
-    and compute another era. And so on.
-    """
-    while era_number < max_era:
-        # This is a blocking call until we receive a crossbred population from main()
-        crossbred_population = in_queue.get()
-
-        # Now that we've received a crossbred population, we start a new era
-        generation_number = 1
-
-        # Start timers for logging
+        # initializer the timer to 0
         timer_total = 0
+        
+        # start the timer
         start_timer = time.perf_counter()
-
-        # Load the received population into our in-memory population object
-        population.load_population(crossbred_population)
-
+        
+        generation_number = 1
+        era_number = 0
+        
+        # instantiate the Schedule object
+        load_schedule = Schedule(cls.number_of_partitions, cls.half_class_maximum, cls.quarter_class_maximum)
+        
+        # load school data into the Schedule object
+        load_schedule.students_from_csv(cls.student_csv_path)
+        
+        # load required subgroups into the Schedule object
+        load_schedule.subgroups_from_csv(cls.required_subgroups_csv_path, "required")    
+        
+        # load preferred subgroups into the Schedule object
+        load_schedule.subgroups_from_csv(cls.preferred_subgroups_csv_path, "preferred")
+        
+        # instantiate the IndividualPartition object
+        first_partition = IndividualPartition(load_schedule)
+        
+        # instatiate the Population object
+        population = Population(first_partition, cls.pop_size)
+        
+        # populate with random individuals for the first generation
+        population.populate()
+        
         # score this initial population
         population.population_fitness()
         
         # instantiate the GeneticAlgorithm object
-        first_generation = GeneticAlgorithm(population, generation_number, rate_of_mutation)
+        first_generation = GeneticAlgorithm(population, generation_number, cls.rate_of_mutation)
         
         # generate Generation #2
         first_generation.generate_next_generation()
         previous_population = first_generation.next_generation
         
-
-        # track the time this process took
+        # track the time this process took:
         end_timer = time.perf_counter()
         timer_total += end_timer - start_timer
 
+        # Uncomment below to track how long this took:
+        # (This includes the initial CSV load, so it will be a bit longer than the general case)
+        # print("Benchmark result = " + str(end_timer - start_timer))
+        
         # get algorithm progress
-        progress = return_progress(process_ID_as_string, generation_number, previous_population, timer_total)
+        progress = Reports.return_progress(process_ID_as_string, generation_number, previous_population, timer_total)
         
         # print algorithm progress
         print(progress)
         
         # write algorithm progress to file   
-        write_progress(IO_DIRECTORY, progress, 'a')
-       
+        Reports.write_progress(cls.io_directory, progress, 'a')
+
         # keep repeating this process until the maximum number
         # of generations or the time limit has been reached
-        while generation_number < max_gen:
+        while generation_number < cls.max_gen:
             
             # same process as above
             start_timer = time.perf_counter()
-
+            
             generation_number += 1
             
             population.sorted_scored_population = previous_population
-            current_generation = GeneticAlgorithm(population, generation_number, rate_of_mutation)
+            current_generation = GeneticAlgorithm(population, generation_number, cls.rate_of_mutation)
             current_generation.generate_next_generation()
             previous_population = current_generation.next_generation
             
             end_timer = time.perf_counter()
             timer_total += end_timer - start_timer
-            
+
+            # Uncomment below to track how long this took:
+            # (This is the general case WITHOUT initial CSV load)
+            # print("Benchmark result = " + str(end_timer - start_timer))
+
             # get algorithm progress
-            progress = return_progress(process_ID_as_string, generation_number, previous_population, timer_total)
-            
+            progress = Reports.return_progress(process_ID_as_string, generation_number, previous_population, timer_total)
+
             # print algorithm progress
             print(progress)
             
-            # write algorithm progress to file   
-            write_progress(IO_DIRECTORY, progress, 'a')                        
-            
-        # Send population back to main()
+            # write algorithm progress to file
+            Reports.write_progress(cls.io_directory, progress, 'a')
+
+        """
+        Now that this era is done, this island process must send its findings back to main(). We can
+        represent our findings as a sorted list: [partition1, partition2, ...], where partition1 is the
+        best, partition2 is second best, etc.
+        
+        Due to some limitations of Python interprocess communication, we represent each partition as a
+        list of letters rather than an actual IndividualPartition() object.
+        
+            Example representation:    [ ["A", "C", "B"], ["B", "A", "C"], ["C", 'C", "A"], ...]
+
+        This would mean that, on this island, the most successful partition we found was ["A", "C", "B"]; the
+        second most successful partition we found was ["B", "A", "C"]; and so on.
+        """
+        era_number += 1
         result_population = []
 
         for item in previous_population:
             result_population.append(item[1])
 
-
         out_queue.put(result_population)
-
 
         # at the end of an era, write a student assignment report
         # and a course-by-course analysis report
@@ -2275,248 +2285,329 @@ def run_era(student_csv_path,
         load_schedule.write_student_assignments()
         load_schedule.write_course_analysis()
 
-        # now we go back to the start of "while True" loop, where we wait
-        # for main() to send the crossbred population back to us
-        era_number += 1
+        """
+        This island process just finished its first era, after having read in the CSV file
+        and seeding itself with a random partition.
 
+        Now, we enter a second phase: we simply wait for main() to send us a new crossbred
+        population via in_queue, then load that population into our genetic algorithm,
+        and compute another era. And so on.
+        """
+        while era_number < cls.max_era:
+            # This is a blocking call until we receive a crossbred population from main()
+            crossbred_population = in_queue.get()
 
-    # We ran all of the eras we were supposed to run, we can exit now
-    return 0
+            # Now that we've received a crossbred population, we start a new era
+            generation_number = 1
 
-def get_crossed_children(population1, population2, num_children, num_tournament_reps):
-    """
-    Helper function used by crossbreed_islands. Given two populations, this method
-    uses tournament selection to choose a parent from each population. These two
-    parents then create a pair of children. This process is repeated until num_children
-    children are produced.
+            # Start timers for logging
+            timer_total = 0
+            start_timer = time.perf_counter()
 
-    Returns a list of children, where each child is a partition
-    (so it's returning a list of list of strings)
+            # Load the received population into our in-memory population object
+            population.load_population(crossbred_population)
 
-    Parameters
-    ----------
-    population1:
-        represents the population of an island: [ ["A", "B", ...], ["B", "C", ...], ... ]
-        parent1 will be selected from this
-    population2:
-        represents the population of an island: [ ["A", "B", ...], ["B", "C", ...], ... ]
-        parent2 will be selected from this
-    num_children: int
-        number of children to generate and return
-    num_tournament_reps: int
-        for the tournament selection to select parents, the number of representatives to use
-    """  
-
-    # size of each population
-    population_size = len(population1)
-
-    # list to store the children
-    crossed_children_list = []
-    
-    for _ in range(num_children//2):
-        # select the two parents using tournament selection
-        # the number 4 is somewhat arbitrary, but seems to work well in practice
-        parent1_index = GeneticAlgorithm.tournament_winner_index(population_size, num_tournament_reps)
-        parent1 = population1[parent1_index]
-        
-        parent2_index = GeneticAlgorithm.tournament_winner_index(population_size, num_tournament_reps)
-        parent2 = population2[parent2_index]
-        
-        # length of a partition
-        genome_length = len(parent1)
- 
-        # a pair of parents generates a pair of children
-        child1, child2 = GeneticAlgorithm.get_children_pair(parent1, parent2)
-
-        # add the pair of children to the output list
-        crossed_children_list.append(child1)
-        crossed_children_list.append(child2)
-
-        # We are generating children in pairs, if we accidentally
-        # add one child too many to self.next_generation, take off 
-        # the extra child 
-        if len(crossed_children_list) > num_children: 
-            crossed_children_list = crossed_children_list[0:-1]
-
-    return crossed_children_list
-
-def crossbreed_islands(island_populations, number_of_islands, number_of_tournament_reps_per_island):
-    """
-    Helper function for crossbreeding across different island populations.
-    Returns the list containing the crossbred populations.
-
-    Parameters
-    ----------
-    island_populations:
-        a list of island populations of the form [population1, population2, ...]
-        each population is of the form [partition1, partition2, ...]
-        each partition is of the form ["A", "C", ...]
-
-        putting all this together, island_populations is of the form:
-        [ [["A", "B", ...], ["B", "C", ...], ...],      <-- population1
-          [["C", "B", ...], ["A", "A", ...], ...],      <-- population2
-          ...                                    ,      <-- population3
-          ...
-        ]    
-
-    """    
-    
-    # each population keeps the top 25% elites
-    num_elites = len(island_populations[0])//4
-
-    # an empty list for each of the crossed populations 
-    crossed_populations = [[] for _ in range(number_of_islands)]
-    
-    # populate the 25% elites onto each island:
-    for i in range(number_of_islands):
-        crossed_pop = crossed_populations[i]
-        orig_pop = island_populations[i]
-        crossed_pop.extend([item for item in orig_pop[0:num_elites]])
-    
-    # for each island population, the remaining 75% is composed of 
-    # [crossing with each of the other (number_of_islands - 1) islands].
-
-    # divide the remaining number of partitions as evenly as possible into
-    # (1/((number_of_islands - 1)))ths
-    
-    # most groups will be of this size:
-    num_children = (len(island_populations[0]) - num_elites)//(number_of_islands - 1)
-    
-    # the last group will be composed of whatever space is left over:
-    remainder = len(island_populations[0]) - num_elites - (num_children)*(number_of_islands - 2)
-
-    # for each island:
-    for i in range(number_of_islands):
-        # the crossed population (that currently only has elites)
-        crossed_pop = crossed_populations[i]
-        
-        # the first population to cross with: 
-        first_pop = island_populations[i]
-        
-        # the indices of the remaining populations to cross with:
-        other_indices = [n for n in range(number_of_islands)]
-        other_indices.remove(i)
-        
-        # for each index (except the last):
-        for index in other_indices[:-1]:
-            # get the second population for crossing
-            second_pop = island_populations[index]
+            # score this initial population
+            population.population_fitness()
             
-            # cross the two islands and add the children to cross_pop 
-            # (the number of children added will = num_children)
-            crossed_pop.extend(get_crossed_children(first_pop, second_pop, num_children, number_of_tournament_reps_per_island))
+            # instantiate the GeneticAlgorithm object
+            first_generation = GeneticAlgorithm(population, generation_number, cls.rate_of_mutation)
+            
+            # generate Generation #2
+            first_generation.generate_next_generation()
+            previous_population = first_generation.next_generation
+            
+
+            # track the time this process took
+            end_timer = time.perf_counter()
+            timer_total += end_timer - start_timer
+
+            # get algorithm progress
+            progress = Reports.return_progress(process_ID_as_string, generation_number, previous_population, timer_total)
+            
+            # print algorithm progress
+            print(progress)
+            
+            # write algorithm progress to file   
+            Reports.write_progress(cls.io_directory, progress, 'a')
+           
+            # keep repeating this process until the maximum number
+            # of generations or the time limit has been reached
+            while generation_number < cls.max_gen:
+                
+                # same process as above
+                start_timer = time.perf_counter()
+
+                generation_number += 1
+                
+                population.sorted_scored_population = previous_population
+                current_generation = GeneticAlgorithm(population, generation_number, cls.rate_of_mutation)
+                current_generation.generate_next_generation()
+                previous_population = current_generation.next_generation
+                
+                end_timer = time.perf_counter()
+                timer_total += end_timer - start_timer
+                
+                # get algorithm progress
+                progress = Reports.return_progress(process_ID_as_string, generation_number, previous_population, timer_total)
+                
+                # print algorithm progress
+                print(progress)
+                
+                # write algorithm progress to file   
+                Reports.write_progress(cls.io_directory, progress, 'a')                        
+                
+            # Send population back to main()
+            result_population = []
+
+            for item in previous_population:
+                result_population.append(item[1])
+
+
+            out_queue.put(result_population)
+
+
+            # at the end of an era, write a student assignment report
+            # and a course-by-course analysis report
+            final_partition = previous_population[0][1]
+            load_schedule.load_partition(final_partition)
+            load_schedule.write_student_assignments()
+            load_schedule.write_course_analysis()
+
+            # now we go back to the start of "while True" loop, where we wait
+            # for main() to send the crossbred population back to us
+            era_number += 1
+
+
+        # We ran all of the eras we were supposed to run, we can exit now
+        return 0
+
+    @classmethod
+    def get_crossed_children(cls, population1, population2, num_children, num_tournament_reps):
+        """
+        Helper function used by crossbreed_islands. Given two populations, this method
+        uses tournament selection to choose a parent from each population. These two
+        parents then create a pair of children. This process is repeated until num_children
+        children are produced.
+
+        Returns a list of children, where each child is a partition
+        (so it's returning a list of list of strings)
+
+        Parameters
+        ----------
+        population1:
+            represents the population of an island: [ ["A", "B", ...], ["B", "C", ...], ... ]
+            parent1 will be selected from this
+        population2:
+            represents the population of an island: [ ["A", "B", ...], ["B", "C", ...], ... ]
+            parent2 will be selected from this
+        num_children: int
+            number of children to generate and return
+        num_tournament_reps: int
+            for the tournament selection to select parents, the number of representatives to use
+        """  
+
+        # size of each population
+        population_size = len(population1)
+
+        # list to store the children
+        crossed_children_list = []
         
-        # cross with the last island and add the children to cross_pop
-        # (this time, the number of children added will = remainder)
-        crossed_pop.extend(get_crossed_children(first_pop, island_populations[-1], remainder, number_of_tournament_reps_per_island))
+        for _ in range(num_children//2):
+            # select the two parents using tournament selection
+            # the number 4 is somewhat arbitrary, but seems to work well in practice
+            parent1_index = GeneticAlgorithm.tournament_winner_index(population_size, num_tournament_reps)
+            parent1 = population1[parent1_index]
+            
+            parent2_index = GeneticAlgorithm.tournament_winner_index(population_size, num_tournament_reps)
+            parent2 = population2[parent2_index]
+            
+            # length of a partition
+            genome_length = len(parent1)
+     
+            # a pair of parents generates a pair of children
+            child1, child2 = GeneticAlgorithm.get_children_pair(parent1, parent2)
 
-    # return the list of crossed populations
-    return crossed_populations
+            # add the pair of children to the output list
+            crossed_children_list.append(child1)
+            crossed_children_list.append(child2)
 
-def parallel_genetic_algorithm():
-    """
-    In order to take advantage of multiple cores, main() works as follows:
-        1. Launch NUMBER_OF_PROCESSES processes, each of which runs an instance of the run_era() function.
-           You can think of this as the genetic algorithm working on N separate islands.
-        2. After running the genetic algorithm for NUMBER_OF_GENERATIONS_PER_ERA generations, these processes
-           each report their population back to main().
-        3. We have just completed an "era". We now start the next era by crossbreeding these populations
-           and then feeding the crossbred population back to each island (process), so that each island can
-           go off and run the genetic algorithm for another era in isolation before reporting back, etc.
-    """
-    # if you open a .csv report in Microsoft Excel and leave it open,
-    # this program will throw a PermissionError when it tries to write
-    # the new .csv report
-    #
-    # this warning is to remind you to close these .csv files before this
-    # happens
-    #
-    warnings.warn("To avoid permission errors, close any output files you may have left open from previous runs.")
+            # We are generating children in pairs, if we accidentally
+            # add one child too many to self.next_generation, take off 
+            # the extra child 
+            if len(crossed_children_list) > num_children: 
+                crossed_children_list = crossed_children_list[0:-1]
 
-    # start progress log
-    write_progress(IO_DIRECTORY, 'Progress Log', 'w')
-    
-    # The "island" processes report back to main() by putting their population into this threadsafe queue
-    island_population_queue = multiprocessing.Queue()
+        return crossed_children_list
 
-    # main() can then send the crossbred populations back to the "island" processes via this threadsafe queue
-    crossbred_population_queue = multiprocessing.Queue()
+    @classmethod
+    def crossbreed_islands(cls, island_populations, number_of_islands, number_of_tournament_reps_per_island):
+        """
+        Helper function for crossbreeding across different island populations.
+        Returns the list containing the crossbred populations.
 
-    # store the processes that we launch in a list
-    island_processes = []
+        Parameters
+        ----------
+        island_populations:
+            a list of island populations of the form [population1, population2, ...]
+            each population is of the form [partition1, partition2, ...]
+            each partition is of the form ["A", "C", ...]
 
-    # instantiate NUMBER_OF_PROCESSES island processes, each of which will execute run_era()
-    for _ in range(0, NUMBER_OF_PROCESSES):
-        p = multiprocessing.Process(target=run_era, args=(INPUT_CSV_FILENAME,
-                                                          REQUIRED_SUBGROUP_CSV_FILENAME,
-                                                          PREFERRED_SUBGROUP_CSV_FILENAME,
-                                                          NUMBER_OF_PARTITIONS,
-                                                          HALF_CLASS_MAXIMUM,
-                                                          QUARTER_CLASS_MAXIMUM,
-                                                          POPULATION_SIZE,
-                                                          MUTATION_RATE,
-                                                          NUMBER_OF_ERAS,
-                                                          NUMBER_OF_GENERATIONS_PER_ERA,
-                                                          island_population_queue,
-                                                          crossbred_population_queue))
-        island_processes.append(p)
+            putting all this together, island_populations is of the form:
+            [ [["A", "B", ...], ["B", "C", ...], ...],      <-- population1
+              [["C", "B", ...], ["A", "A", ...], ...],      <-- population2
+              ...                                    ,      <-- population3
+              ...
+            ]    
 
-    # start the processes
-    for p in island_processes:
-        p.start()
-
-    # timers for logging
-    start_timer = end_timer = total_time = 0
-    
-    # number of eras we've completed
-    era_number = 0
-
-    # one iteration through this loop represents one era
-    while total_time < 60*TIME_LIMIT and era_number < NUMBER_OF_ERAS:
-        # we will time how long this era takes us
-        start_timer = time.perf_counter()
-
-        # each island will send us their population - store all of them in this list
-        island_populations = []
-
-        # get() is blocking, so the main() process will spend most of its
-        # time waiting here for all of the islands to report back
-        for i in range(NUMBER_OF_PROCESSES):
-            island_populations.append(island_population_queue.get())
-
-        # now that we have a population from each island, crossbreed
-        # both the input (island_populations) and the output (crossed_populations)
-        # is represented as a list of populations
-        crossed_populations = crossbreed_islands(island_populations, NUMBER_OF_PROCESSES, NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND)
-
-        # send this crossed population back to the island process via crossbred_population_queue
-        # (each island process is constantly checking this queue for a crossbred population,
-        #  and once it is able to pop one off, starts computing the new era using that initial population)
-        for item in crossed_populations:
-            crossbred_population_queue.put(item)
-
-        # we're done with this era
-        era_number += 1
-
-        # log time elapsed
-        end_timer = time.perf_counter()
-        total_time += (end_timer - start_timer)
-
-        # get current progress
-        progress = return_era_progress(era_number, start_timer, end_timer, total_time)
+        """    
         
-        # print current progress
-        print(progress)
+        # each population keeps the top 25% elites
+        num_elites = len(island_populations[0])//4
+
+        # an empty list for each of the crossed populations 
+        crossed_populations = [[] for _ in range(number_of_islands)]
         
-        # write out current progress
-        write_progress(IO_DIRECTORY, progress, 'a')
+        # populate the 25% elites onto each island:
+        for i in range(number_of_islands):
+            crossed_pop = crossed_populations[i]
+            orig_pop = island_populations[i]
+            crossed_pop.extend([item for item in orig_pop[0:num_elites]])
         
-    # wait for all processes to exit
-    for p in island_processes:
-        p.join()
+        # for each island population, the remaining 75% is composed of 
+        # [crossing with each of the other (number_of_islands - 1) islands].
+
+        # divide the remaining number of partitions as evenly as possible into
+        # (1/((number_of_islands - 1)))ths
+        
+        # most groups will be of this size:
+        num_children = (len(island_populations[0]) - num_elites)//(number_of_islands - 1)
+        
+        # the last group will be composed of whatever space is left over:
+        remainder = len(island_populations[0]) - num_elites - (num_children)*(number_of_islands - 2)
+
+        # for each island:
+        for i in range(number_of_islands):
+            # the crossed population (that currently only has elites)
+            crossed_pop = crossed_populations[i]
+            
+            # the first population to cross with: 
+            first_pop = island_populations[i]
+            
+            # the indices of the remaining populations to cross with:
+            other_indices = [n for n in range(number_of_islands)]
+            other_indices.remove(i)
+            
+            # for each index (except the last):
+            for index in other_indices[:-1]:
+                # get the second population for crossing
+                second_pop = island_populations[index]
+                
+                # cross the two islands and add the children to cross_pop 
+                # (the number of children added will = num_children)
+                crossed_pop.extend(cls.get_crossed_children(first_pop, second_pop, num_children, number_of_tournament_reps_per_island))
+            
+            # cross with the last island and add the children to cross_pop
+            # (this time, the number of children added will = remainder)
+            crossed_pop.extend(cls.get_crossed_children(first_pop, island_populations[-1], remainder, number_of_tournament_reps_per_island))
+
+        # return the list of crossed populations
+        return crossed_populations
+
+    @classmethod
+    def run_parallel(cls):
+        """
+        In order to take advantage of multiple cores, main() works as follows:
+            1. Launch NUMBER_OF_PROCESSES processes, each of which runs an instance of the self.run_era() function.
+               You can think of this as the genetic algorithm working on N separate islands.
+            2. After running the genetic algorithm for NUMBER_OF_GENERATIONS_PER_ERA generations, these processes
+               each report their population back to main().
+            3. We have just completed an "era". We now start the next era by crossbreeding these populations
+               and then feeding the crossbred population back to each island (process), so that each island can
+               go off and run the genetic algorithm for another era in isolation before reporting back, etc.
+        """
+        # if you open a .csv report in Microsoft Excel and leave it open,
+        # this program will throw a PermissionError when it tries to write
+        # the new .csv report
+        #
+        # this warning is to remind you to close these .csv files before this
+        # happens
+        #
+        warnings.warn("To avoid permission errors, close any output files you may have left open from previous runs.")
+
+        # start progress log
+        Reports.write_progress(cls.io_directory, 'Progress Log', 'w')
+        
+        # The "island" processes report back to main() by putting their population into this threadsafe queue
+        island_population_queue = multiprocessing.Queue()
+
+        # main() can then send the crossbred populations back to the "island" processes via this threadsafe queue
+        crossbred_population_queue = multiprocessing.Queue()
+
+        # store the processes that we launch in a list
+        island_processes = []
+
+        # instantiate NUMBER_OF_PROCESSES island processes, each of which will execute self.run_era()
+        for _ in range(0, cls.number_of_processes):
+            p = multiprocessing.Process(target=cls.run_era, args=(island_population_queue, crossbred_population_queue))
+            island_processes.append(p)
+
+        # start the processes
+        for p in island_processes:
+            p.start()
+
+        # timers for logging
+        start_timer = end_timer = total_time = 0
+        
+        # number of eras we've completed
+        era_number = 0
+
+        # one iteration through this loop represents one era
+        while total_time < 60*cls.time_limit and era_number < cls.max_era:
+            # we will time how long this era takes us
+            start_timer = time.perf_counter()
+
+            # each island will send us their population - store all of them in this list
+            island_populations = []
+
+            # get() is blocking, so the main() process will spend most of its
+            # time waiting here for all of the islands to report back
+            for i in range(cls.number_of_processes):
+                island_populations.append(island_population_queue.get())
+
+            # now that we have a population from each island, crossbreed
+            # both the input (island_populations) and the output (crossed_populations)
+            # is represented as a list of populations
+            crossed_populations = cls.crossbreed_islands(island_populations, cls.number_of_processes, cls.number_of_tournament_reps_per_island)
+
+            # send this crossed population back to the island process via crossbred_population_queue
+            # (each island process is constantly checking this queue for a crossbred population,
+            #  and once it is able to pop one off, starts computing the new era using that initial population)
+            for item in crossed_populations:
+                crossbred_population_queue.put(item)
+
+            # we're done with this era
+            era_number += 1
+
+            # log time elapsed
+            end_timer = time.perf_counter()
+            total_time += (end_timer - start_timer)
+
+            # get current progress
+            progress = Reports.return_era_progress(era_number, start_timer, end_timer, total_time)
+            
+            # print current progress
+            print(progress)
+            
+            # write out current progress
+            Reports.write_progress(cls.io_directory, progress, 'a')
+            
+        # wait for all processes to exit
+        for p in island_processes:
+            p.join()
 
 if __name__ == "__main__":
-    parallel_genetic_algorithm()
+    ParallelGeneticAlgorithm.run_parallel()
 
 
 
