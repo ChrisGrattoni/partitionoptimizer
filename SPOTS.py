@@ -35,6 +35,8 @@ import warnings # used in run_loop() to remind users to close output reports
 import multiprocessing # run the genetic algorithm in parallel on multiple cores
 import os   # used for getting the process ID via os.getpid()
 from pathlib import Path # used for getting directory of SPOTS.py
+import numpy as np # used in creating pie charts
+import matplotlib.pyplot as plt # used to generate pie charts of compliance/out of compliance
 
 # SCHOOL-SPECIFIC SETTINGS:
 
@@ -1294,7 +1296,7 @@ class Schedule:
             number_of_subgroups = len(self.preferred_subgroups_list)
             
             for subgroup in self.preferred_subgroups_list:
-                subgroup_letter_set = {}
+                subgroup_letter_set = set()
                 
                 for student in subgroup:
                     subgroup_letter_set.add(student.letter)
@@ -1338,7 +1340,7 @@ class Schedule:
         for student in self.student_list:
             if student.id == student_id:
                 student_letter_name = "Group: " + student.letter + ", Name: " + student.last_name + ", " + student.first_name
-                current_classes = tuple[1]
+                current_classes = student.schedule
         
         return [student_letter_name, [(course.room_number, course.period) for course in current_classes]]
     
@@ -2049,6 +2051,46 @@ class Reports:
         
         return progress_string
 
+    @classmethod
+    def create_pie_chart(cls, pid_string, era_number, final_partition_score):
+        # NEXT: CHANGE SO THAT INSTEAD OF ONE CHART PRINTED FOR EVERY THREAD, 
+        # THE BEST PARITTION OF ALL OF THE THREADS IS PRINTED FOR THE ERA
+        """
+        Creates a pie chart visualizing the portion of classrooms in compliance (green) vs. out of compliance (red)
+
+        Parameters
+        ----------
+        pid_string: string
+            process ID string
+        
+        era_number: int
+            the current era number
+
+        final_partition_score: tuple
+            the fitness score (including number in compliance, etc) of the best partition found
+        """
+
+        in_compliance = final_partition_score[2]
+        total_courses = final_partition_score[-1]
+
+        labels = ["In Compliance", "Out of Compliance"]
+        sizes = [in_compliance, total_courses - in_compliance]
+        colors = ['g', 'r']
+
+        # generates a string as the label for each slice
+        def pie_label_string(pct):
+            num = int(np.round(pct/100 * sum(sizes)))
+            return str(np.round(pct)) + "% \n" + "(" + str(num) + " out of " + str(total_courses) + ")"
+
+        fig, ax = plt.subplots(1, 1)
+        ax.set_title("PID(" + pid_string + "): Era " + str(era_number) + ": Classrooms In/Out of Compliance with Social Distancing")
+        ax.pie(sizes, labels = labels, autopct = pie_label_string,
+                colors = colors, startangle = 90)
+        ax.axis('equal')
+
+        pie_file_name = pid_string + "_era" + str(era_number) + ".png"
+        fig.savefig(pie_file_name, bbox_inches='tight')
+
 class ParallelGeneticAlgorithm(GeneticAlgorithm):        
     """
     A class that implements the parallel genetic algorithm 
@@ -2285,6 +2327,8 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         load_schedule.write_student_assignments()
         load_schedule.write_course_analysis()
 
+        Reports.create_pie_chart(process_ID_as_string, era_number, previous_population[0][0])
+
         """
         This island process just finished its first era, after having read in the CSV file
         and seeding itself with a random partition.
@@ -2363,9 +2407,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             for item in previous_population:
                 result_population.append(item[1])
 
-
             out_queue.put(result_population)
-
 
             # at the end of an era, write a student assignment report
             # and a course-by-course analysis report
@@ -2378,6 +2420,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             # for main() to send the crossbred population back to us
             era_number += 1
 
+            Reports.create_pie_chart(process_ID_as_string, era_number, previous_population[0][0])
 
         # We ran all of the eras we were supposed to run, we can exit now
         return 0
@@ -2608,19 +2651,3 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
 
 if __name__ == "__main__":
     ParallelGeneticAlgorithm.run_parallel()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
