@@ -293,7 +293,7 @@ class PageOne(tk.Frame):
                 progress.stop()
         
         progress = ttk.Progressbar(self, orient = HORIZONTAL,
-                                   length = 300, mode = 'determinate')
+                                   length = 400, mode = 'determinate')
         progress.grid(row = 1, column = 0)
         
         buttonStart = ttk.Button(self, text="Start", command = step)
