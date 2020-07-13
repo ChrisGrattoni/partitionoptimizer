@@ -1956,12 +1956,12 @@ class Pie_Max_Score:
     ----------
     lock : multiprocessing.Lock() object
         ensures modifications to shared variables are process safe
-    best_fitness_score : multiprocessing.Value()
+    best_fitness_score : shared double
         shared double between processes, stores the fitness score of the best partition found
-    best_in_compliance : multiprocessing.Value()
+    best_in_compliance : shared int
         shared integer between processes, stores the number of classrooms in compliance of the 
         best partition found
-    total_courses : multiprocessing.Value()
+    total_courses : shared int
         the total number of classrooms in effect
 
     Methods
@@ -1974,12 +1974,34 @@ class Pie_Max_Score:
     """
 
     def __init__(self, initval = 0):
+        """
+        Parameters
+        ----------
+        lock: multiprocessing.Lock() object
+            used to ensure that modifications to shared memory are threadsafe
+        best_fitness_score: shared double
+            shared double between processes, used to store fitness score of best partition found
+        best_in_compliance: shared int
+            shared integer between processes, used to store number of classrooms in compliance
+            of the best partition found
+        total_courses: shared int
+            total number of classrooms in effect
+        """
         self.lock = multiprocessing.Lock()
         self.best_fitness_score = multiprocessing.Value('d', initval)
         self.best_in_compliance = multiprocessing.Value('i', initval)
         self.total_courses = multiprocessing.Value('i', initval)
 
     def update_best_partition(self, cur_partition_score):
+        """
+        A method to update the best fitness scores if the next partition found is better
+
+        Parameters
+        ----------
+        cur_partition_score: tuple
+            the fitness score (and # in compliance, etc.) of the current partition found
+        """
+
         with self.lock:
             if (cur_partition_score[0] > self.best_fitness_score.value):
                 self.best_fitness_score.value = cur_partition_score[0]
@@ -1987,6 +2009,14 @@ class Pie_Max_Score:
                 self.total_courses.value = cur_partition_score[-1]
     
     def get_score_values(self):
+        """
+        A method to retrieve the best fitness score values found 
+
+        Parameters
+        ----------
+        None
+        """
+        
         with self.lock:
             return self.best_fitness_score.value, self.best_in_compliance.value, self.total_courses.value
 
