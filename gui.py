@@ -23,8 +23,6 @@ Requires-Python: >= 3.8 (Feature from version 3.7+: dictionary order is guarante
 Project-URL: https://github.com/NFLtheorem/partitionoptimizer 
 """
 
-
-
 # import statements: 
 import random # used in the set_letter method of the Student class
 import csv # used in students_from_csv method of IndividualPartition class
@@ -39,49 +37,10 @@ import multiprocessing # run the genetic algorithm in parallel on multiple cores
 import os   # used for getting the process ID via os.getpid()
 from pathlib import Path # used for getting directory of SPOTS.py
 import tkinter as tk # used in the GUI
-from tkinter import filedialog # used for the GUI file browser
-from tkinter import font # used to set the width of the "Start" button
+from tkinter import filedialog, font # used for the GUI file browser
+#from tkinter import font # used to set the width of the "Start" button
 import threading # used to run the GUI and the parallel GA in separate threads
-from multiprocessing import Value
-
-c = threading.Condition()
-
-# SCHOOL-SPECIFIC SETTINGS:
-
-"""
-THESE ARE MARKED FOR DELETION ONCE GUI IS WORKING CORRECTLY
-"""
-
-# number of groups to partition students into (only 2 and 4 are implemented)
-NUMBER_OF_PARTITIONS = 4
-
-# time measured in minutes (default = 480 min or 8 hr)
-TIME_LIMIT = 60*8 
-
-# max size of a partition when dividing students into two cohorts (default = 15) 
-HALF_CLASS_MAXIMUM = 15 
-
-# max size of a partition when dividing students into four cohorts (default = 9)
-QUARTER_CLASS_MAXIMUM = 9
-
-# filename of .csv file with student schedule data (default = "example_student_data.csv) 
-INPUT_CSV_FILENAME = "example_student_data.csv" 
-
-# filename of .csv file with required student subgrouping data (default = "example_subgroups.csv") 
-REQUIRED_SUBGROUP_CSV_FILENAME = "example_subgroups.csv" 
-# if no required subgroups are needed, set the above value to None
-
-# filename of .csv file with preferred student subgrouping data (default = None) 
-PREFERRED_SUBGROUP_CSV_FILENAME = None
-# if no preferred subgroups are needed, set the above value to None
-
-# GENETIC ALGORITHM SETTINGS
-# 
-# If you experiment with the following settings, you may happen upon a 
-# combination of values that optimizes more efficiently than the default 
-# settings in this program. If so, please share these values with me at 
-# studentpartitionoptimizer@gmail.com so I can verify and make these the 
-# new defaults. 
+import yaml # used to import settings from settings.yaml
 
 # number of processes to launch (must be >= 4)
 NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
@@ -91,51 +50,18 @@ NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
 # well in practice.
 NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND = NUMBER_OF_PROCESSES//4
 
-# recommended range: between 0.01 and 0.05, (default = 0.01)
-MUTATION_RATE = 0.01
-
-# the "right" value here is going to depend a lot on number of cores,
-# so you can play around with this to see what seems to work best
-# recommended range for a 16-core machine: 20 - 80
-POPULATION_SIZE = 60
-
-# recommended range: run it for as long as you have time, or until the
-# [number of compliant sections] metric seems to plateau out.
-NUMBER_OF_ERAS = 5000
-
-# in my experience while testing with 16 cores, a small number here made sense
-# (with more frequent crossbreeding between islands). i believe this is because
-# there are a lot of islands to cross with, and with 15 neighboring islands chances are
-# good that one of your neighbors has found some opimization feature that you haven't yet
-# if you have fewer cores, then i think this number should probably increase a bit
-# recommended range, at least according to my experimentation: 10 - 50
-NUMBER_OF_GENERATIONS_PER_ERA = 20
-
-# I/O DIRECTORY
-
 # gets the location of the .py file (also where input .csv files should be)
 IO_DIRECTORY = Path(os.path.dirname(__file__))
 
-"""
-# use pathlib Path object to convert slashes for
-# the current operating system
-INPUT_CSV_FILENAME = IO_DIRECTORY / INPUT_CSV_FILENAME
+with open(IO_DIRECTORY / 'settings.yaml') as infile:
+    # convert .yaml to dictionary
+    settings_dict = yaml.load(infile, Loader=yaml.FullLoader)
 
-if REQUIRED_SUBGROUP_CSV_FILENAME is not None:
-    REQUIRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY / REQUIRED_SUBGROUP_CSV_FILENAME
-
-if PREFERRED_SUBGROUP_CSV_FILENAME is not None:
-    PREFERRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY / PREFERRED_SUBGROUP_CSV_FILENAME
-"""
+# toggle GUI on/off
+GUI_BOOL = False
 
 # default width of the GUI window
 WINDOW_WIDTH = 600
-
-#from multiprocessing import shared_memory
-
-#settings_list = shared_memory.ShareableList([2, 480])
-
-
 
 class Window(tk.Tk):
 
@@ -202,43 +128,36 @@ class StartPage(tk.Frame):
         
         nop = self.input_dict["Partition Size (2 or 4)"]
         nop = int(nop.get())
-        ParallelGeneticAlgorithm.number_of_partitions = multiprocessing.Value("i", nop) 
-        
+        settings_dict["number_of_partitions"] = nop
+                
         hcm = self.input_dict["Max Class Size (2 Groups)"]
         hcm = int(hcm.get())
-        ParallelGeneticAlgorithm.half_class_maximum = multiprocessing.Value("i", hcm)
+        settings_dict["half_class_maximum"] = hcm
                 
         qcm = self.input_dict["Max Class Size (4 Groups)"]
         qcm = int(qcm.get())
-        ParallelGeneticAlgorithm.quarter_class_maximum = multiprocessing.Value("i", qcm)
+        settings_dict["quarter_class_maximum"] = qcm
         
         tlim = self.input_dict["Max Runtime (Minutes)"]
         tlim = int(tlim.get())
-        ParallelGeneticAlgorithm.time_limit = multiprocessing.Value("i", tlim)
+        settings_dict["time_limit"] = tlim
         
         scp = self.input_dict["Student Course Data:"]
         scp = scp["text"]
-        if len(scp) == 0:
-            ParallelGeneticAlgorithm.student_csv_path = None
-        else: 
-            ParallelGeneticAlgorithm.student_csv_path = IO_DIRECTORY / scp
+        settings_dict["input_csv_filename"] = scp
         
         rss = self.input_dict["Required Student Subgroups:"]
         rss = rss["text"]
-        if len(rss) == 0:
-            ParallelGeneticAlgorithm.required_subgroups_csv_path = None
-        else:
-            ParallelGeneticAlgorithm.required_subgroups_csv_path = IO_DIRECTORY / rss
+        settings_dict["required_subgroup_csv_filename"] = rss
         
         pss = self.input_dict["Preferred Student Subgroups:"]
         pss = pss["text"]
-        if len(pss) == 0:
-            ParallelGeneticAlgorithm.preferred_subgroups_csv_path = None
-        else:
-            ParallelGeneticAlgorithm.required_subgroups_csv_path = IO_DIRECTORY / pss
-
-        #lock.release()
+        settings_dict["preferred_subgroup_csv_filename"] = pss
         
+        with open(IO_DIRECTORY / 'settings.yaml', 'w+') as outfile:
+            # dump dictionary to .yaml
+            yaml.dump(settings_dict, outfile)
+               
         new_thread = threading.Thread(target = ParallelGeneticAlgorithm.run_parallel)
         new_thread.start()
 
@@ -1459,7 +1378,7 @@ class Schedule:
             number_of_subgroups = len(self.preferred_subgroups_list)
             
             for subgroup in self.preferred_subgroups_list:
-                subgroup_letter_set = {}
+                subgroup_letter_set = set()
                 
                 for student in subgroup:
                     subgroup_letter_set.add(student.letter)
@@ -2284,29 +2203,42 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         then periodically crossbreed between islands
     """
 
-    # class attributes (references to global variables at top of document)
-    number_of_processes = NUMBER_OF_PROCESSES
     io_directory = IO_DIRECTORY
 
-    student_csv_path = IO_DIRECTORY / INPUT_CSV_FILENAME
+    with open(IO_DIRECTORY / 'settings.yaml') as infile:
+        # convert .yaml to dictionary
+        settings_dict = yaml.load(infile, Loader=yaml.FullLoader)
 
-    required_subgroups_csv_path = REQUIRED_SUBGROUP_CSV_FILENAME
-    if REQUIRED_SUBGROUP_CSV_FILENAME is not None:
-        REQUIRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY / REQUIRED_SUBGROUP_CSV_FILENAME
-
-    preferred_subgroups_csv_path = PREFERRED_SUBGROUP_CSV_FILENAME
-    if PREFERRED_SUBGROUP_CSV_FILENAME is not None:
-        PREFERRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY / PREFERRED_SUBGROUP_CSV_FILENAME
+    number_of_partitions = settings_dict["number_of_partitions"]
+                
+    half_class_maximum = settings_dict["half_class_maximum"]
+                
+    quarter_class_maximum = settings_dict["quarter_class_maximum"]
         
-    number_of_partitions = NUMBER_OF_PARTITIONS
-    half_class_maximum = HALF_CLASS_MAXIMUM
-    quarter_class_maximum = QUARTER_CLASS_MAXIMUM
-    pop_size = POPULATION_SIZE
-    rate_of_mutation = MUTATION_RATE
-    max_era = NUMBER_OF_ERAS
-    max_gen = NUMBER_OF_GENERATIONS_PER_ERA
-    time_limit = TIME_LIMIT
+    time_limit = settings_dict["time_limit"]
+        
+    if len(settings_dict["input_csv_filename"]) == 0:
+        student_csv_path = None
+    else: 
+        student_csv_path = io_directory / settings_dict["input_csv_filename"]
+
+    if len(settings_dict["required_subgroup_csv_filename"]) == 0:
+        required_subgroups_csv_path = None
+    else: 
+        required_subgroups_csv_path = io_directory / settings_dict["required_subgroup_csv_filename"]
+        
+    if len(settings_dict["preferred_subgroup_csv_filename"]) == 0:
+        preferred_subgroups_csv_path = None
+    else: 
+        preferred_subgroups_csv_path = io_directory / settings_dict["preferred_subgroup_csv_filename"]
+        
+    number_of_processes = NUMBER_OF_PROCESSES 
     number_of_tournament_reps_per_island = NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND
+
+    rate_of_mutation = settings_dict["mutation_rate"]
+    pop_size = settings_dict["population_size"]
+    max_era = settings_dict["number_of_eras"]
+    max_gen = settings_dict["number_of_generations_per_era"]
 
     @classmethod
     def run_era(cls, 
@@ -2318,6 +2250,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
                 preferred_subgroups_csv_path,
                 out_queue, 
                 in_queue):
+        
         """
         Repeat the Genetic Algorithm based on a specified number of generations (or time limit)
                     
@@ -2724,6 +2657,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         # store the processes that we launch in a list
         island_processes = []
 
+        """
         try:
             cls.number_of_partitions = cls.number_of_partitions.value
         except TypeError:
@@ -2743,6 +2677,34 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             cls.time_limit = cls.time_limit.value
         except TypeError:
             pass
+        """
+        
+        with open(IO_DIRECTORY / 'settings.yaml') as infile:
+            # convert .yaml to dictionary
+            settings_dict = yaml.load(infile, Loader=yaml.FullLoader)
+
+        cls.number_of_partitions = settings_dict["number_of_partitions"]
+                    
+        cls.half_class_maximum = settings_dict["half_class_maximum"]
+                    
+        cls.quarter_class_maximum = settings_dict["quarter_class_maximum"]
+            
+        cls.time_limit = settings_dict["time_limit"]
+            
+        if len(settings_dict["input_csv_filename"]) == 0:
+            cls.student_csv_path = None
+        else: 
+            cls.student_csv_path = cls.io_directory / settings_dict["input_csv_filename"]
+
+        if len(settings_dict["required_subgroup_csv_filename"]) == 0:
+            cls.required_subgroups_csv_path = None
+        else: 
+            cls.required_subgroups_csv_path = cls.io_directory / settings_dict["required_subgroup_csv_filename"]
+            
+        if len(settings_dict["preferred_subgroup_csv_filename"]) == 0:
+            cls.preferred_subgroups_csv_path = None
+        else: 
+            cls.preferred_subgroups_csv_path = cls.io_directory / settings_dict["preferred_subgroup_csv_filename"]
        
         # instantiate NUMBER_OF_PROCESSES island processes, each of which will execute self.run_era()
         for _ in range(0, cls.number_of_processes):
@@ -2797,9 +2759,6 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             end_timer = time.perf_counter()
             total_time += (end_timer - start_timer)
 
-            if total_time > 60*cls.time_limit:
-                print("TIME LIMIT REACHED")
-
             # get current progress
             progress = Reports.return_era_progress(era_number, start_timer, end_timer, total_time)
             
@@ -2809,18 +2768,16 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             # write out current progress
             Reports.write_progress(cls.io_directory, progress, 'a')
         
-        print("Program Has Ended")
-        
         # wait for all processes to exit
         for p in island_processes:
             p.join()
-        
-        print("Program Really Has Ended For Real Now")
 
 if __name__ == "__main__":
-    root = Window()
-    root.mainloop()
-    
+    if GUI_BOOL:
+        root = Window()
+        root.mainloop()
+    else:
+        ParallelGeneticAlgorithm.run_parallel()
 
 
 

@@ -1,0 +1,11 @@
+half_class_maximum: 15
+input_csv_filename: C:/Users/cgrattoni/Documents/GitHub/partitionoptimizer/example_student_data.csv
+mutation_rate: 0.01
+number_of_eras: 5000
+number_of_generations_per_era: 20
+number_of_partitions: 4
+population_size: 60
+preferred_subgroup_csv_filename: ''
+quarter_class_maximum: 11
+required_subgroup_csv_filename: C:/Users/cgrattoni/Documents/GitHub/partitionoptimizer/example_subgroups.csv
+time_limit: 1
