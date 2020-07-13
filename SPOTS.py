@@ -1947,6 +1947,49 @@ class GeneticAlgorithm(Population):
         
         return self.population_obj.sorted_scored_population
 
+class Pie_Max_Score:
+    """
+    A threadsafe class for keeping track of the maximum fitness score of the partitions from each process 
+    (updated after every era)
+
+    Attributes
+    ----------
+    lock : multiprocessing.Lock() object
+        ensures modifications to shared variables are process safe
+    best_fitness_score : multiprocessing.Value()
+        shared double between processes, stores the fitness score of the best partition found
+    best_in_compliance : multiprocessing.Value()
+        shared integer between processes, stores the number of classrooms in compliance of the 
+        best partition found
+    total_courses : multiprocessing.Value()
+        the total number of classrooms in effect
+
+    Methods
+    ----------
+    update_best_partition(self, cur_partition_score)
+        compares the cur_partition_score to the best fitness score found and updates it if the current
+        partition is better
+    get_score_values(self)
+        returns a tuple of (best_fitness_score, best_in_compliance, total_courses) for the best partition found
+    """
+
+    def __init__(self, initval = 0):
+        self.lock = multiprocessing.Lock()
+        self.best_fitness_score = multiprocessing.Value('d', initval)
+        self.best_in_compliance = multiprocessing.Value('i', initval)
+        self.total_courses = multiprocessing.Value('i', initval)
+
+    def update_best_partition(self, cur_partition_score):
+        with self.lock:
+            if (cur_partition_score[0] > self.best_fitness_score.value):
+                self.best_fitness_score.value = cur_partition_score[0]
+                self.best_in_compliance.value = cur_partition_score[2]
+                self.total_courses.value = cur_partition_score[-1]
+    
+    def get_score_values(self):
+        with self.lock:
+            return self.best_fitness_score.value, self.best_in_compliance.value, self.total_courses.value
+
 class Reports:
     """
     A class for generating reports/visualizations of the algorithm's progress
@@ -1963,6 +2006,9 @@ class Reports:
         write a progress_string to the output log
     return_era_progress(cls, era_number, start_timer, end_timer, total_time)
         concatenate a string with parallel genetic algorithm progress
+    create_pie_chart(cls, pid_string, era_number, in_compliance, total_courses)
+        generates a pie chart visualizing the number of classrooms in/out of compliance
+        with social distancing
     """
 
     @classmethod
@@ -2052,26 +2098,21 @@ class Reports:
         return progress_string
 
     @classmethod
-    def create_pie_chart(cls, pid_string, era_number, final_partition_score):
-        # NEXT: CHANGE SO THAT INSTEAD OF ONE CHART PRINTED FOR EVERY THREAD, 
-        # THE BEST PARITTION OF ALL OF THE THREADS IS PRINTED FOR THE ERA
+    def create_pie_chart(cls, era_number, in_compliance, total_courses):
         """
         Creates a pie chart visualizing the portion of classrooms in compliance (green) vs. out of compliance (red)
 
         Parameters
         ----------
-        pid_string: string
-            process ID string
-        
         era_number: int
             the current era number
 
-        final_partition_score: tuple
-            the fitness score (including number in compliance, etc) of the best partition found
+        in_compliance: int
+            the number of classrooms that satisfy social distancing guidelines as defined
+        
+        total_courses: int
+            the total number of classrooms present
         """
-
-        in_compliance = final_partition_score[2]
-        total_courses = final_partition_score[-1]
 
         labels = ["In Compliance", "Out of Compliance"]
         sizes = [in_compliance, total_courses - in_compliance]
@@ -2083,12 +2124,12 @@ class Reports:
             return str(np.round(pct)) + "% \n" + "(" + str(num) + " out of " + str(total_courses) + ")"
 
         fig, ax = plt.subplots(1, 1)
-        ax.set_title("PID(" + pid_string + "): Era " + str(era_number) + ": Classrooms In/Out of Compliance with Social Distancing")
+        ax.set_title("Era " + str(era_number) + ": Classrooms In/Out of Compliance with Social Distancing")
         ax.pie(sizes, labels = labels, autopct = pie_label_string,
                 colors = colors, startangle = 90)
         ax.axis('equal')
 
-        pie_file_name = pid_string + "_era" + str(era_number) + ".png"
+        pie_file_name = "era" + str(era_number) + ".png"
         fig.savefig(pie_file_name, bbox_inches='tight')
 
 class ParallelGeneticAlgorithm(GeneticAlgorithm):        
@@ -2178,7 +2219,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
     number_of_tournament_reps_per_island = NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND
     
     @classmethod
-    def run_era(cls, out_queue, in_queue):
+    def run_era(cls, out_queue, in_queue, pie_max_score):
         """
         Repeat the Genetic Algorithm based on a specified number of generations (or time limit)
                     
@@ -2207,6 +2248,9 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             threadsafe outbound queue, used to report final population to main()
         in_queue: multiprocessing.Queue()
             threadsafe inbound queue, used to receive crossbred population from main()
+        pie_max_score: Pie_Max_Score object
+            threadsafe object used to store the fitness score (incl. number in compliance, etc) of the
+            best partition found
         """     
         
         # this function is run by child processes that main() launches, so grab the process ID for logging purposes
@@ -2320,14 +2364,15 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
 
         out_queue.put(result_population)
 
+        # update the fitness score of the best partition found at the end of every era
+        pie_max_score.update_best_partition(previous_population[0][0])
+
         # at the end of an era, write a student assignment report
         # and a course-by-course analysis report
         final_partition = previous_population[0][1]
         load_schedule.load_partition(final_partition)
         load_schedule.write_student_assignments()
         load_schedule.write_course_analysis()
-
-        Reports.create_pie_chart(process_ID_as_string, era_number, previous_population[0][0])
 
         """
         This island process just finished its first era, after having read in the CSV file
@@ -2361,7 +2406,6 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             first_generation.generate_next_generation()
             previous_population = first_generation.next_generation
             
-
             # track the time this process took
             end_timer = time.perf_counter()
             timer_total += end_timer - start_timer
@@ -2420,7 +2464,8 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             # for main() to send the crossbred population back to us
             era_number += 1
 
-            Reports.create_pie_chart(process_ID_as_string, era_number, previous_population[0][0])
+            # update the fitness score of the best partition found at the end of every era
+            pie_max_score.update_best_partition(previous_population[0][0])
 
         # We ran all of the eras we were supposed to run, we can exit now
         return 0
@@ -2587,12 +2632,15 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         # main() can then send the crossbred populations back to the "island" processes via this threadsafe queue
         crossbred_population_queue = multiprocessing.Queue()
 
+        # stores the fitness scores for the best partition found every era
+        pie_max_score = Pie_Max_Score()
+
         # store the processes that we launch in a list
         island_processes = []
 
         # instantiate NUMBER_OF_PROCESSES island processes, each of which will execute self.run_era()
         for _ in range(0, cls.number_of_processes):
-            p = multiprocessing.Process(target=cls.run_era, args=(island_population_queue, crossbred_population_queue))
+            p = multiprocessing.Process(target=cls.run_era, args=(island_population_queue, crossbred_population_queue, pie_max_score))
             island_processes.append(p)
 
         # start the processes
@@ -2644,6 +2692,12 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             
             # write out current progress
             Reports.write_progress(cls.io_directory, progress, 'a')
+
+            # retrieve the fitness score info. of the best partition found this era
+            best_fitness_score, best_in_compliance, total_courses = pie_max_score.get_score_values()     
+
+            # make a pie chart for the best partition found this era
+            Reports.create_pie_chart(era_number, best_in_compliance, total_courses)
             
         # wait for all processes to exit
         for p in island_processes:
