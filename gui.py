@@ -58,7 +58,7 @@ with open(IO_DIRECTORY / 'settings.yaml') as infile:
     settings_dict = yaml.load(infile, Loader=yaml.FullLoader)
 
 # toggle GUI on/off
-GUI_BOOL = False
+USE_GUI = False
 
 # default width of the GUI window
 WINDOW_WIDTH = 600
@@ -154,9 +154,7 @@ class StartPage(tk.Frame):
         pss = pss["text"]
         settings_dict["preferred_subgroup_csv_filename"] = pss
         
-        with open(IO_DIRECTORY / 'settings.yaml', 'w+') as outfile:
-            # dump dictionary to .yaml
-            yaml.dump(settings_dict, outfile)
+        Reports.yaml_writer(settings_dict)
                
         new_thread = threading.Thread(target = ParallelGeneticAlgorithm.run_parallel)
         new_thread.start()
@@ -2132,6 +2130,94 @@ class Reports:
         progress_string += "Total elapsed time: " + str(round(total_time/60, 2)) + " min"
         
         return progress_string
+    
+    @classmethod
+    def yaml_writer(cls, settings_dict):
+        settings_string = "# SCHOOL-SPECIFIC SETTINGS: \n \n"
+
+        settings_string += "# Number of groups to partition students into (only 2 and 4 are implemented) \n"
+        settings_string += "number_of_partitions : "
+        settings_string += str(settings_dict["number_of_partitions"])
+        settings_string += "\n \n"
+
+        settings_string += "# Max size of a partition when dividing students into two cohorts (default = 15) \n"
+        settings_string += "half_class_maximum : "
+        settings_string += str(settings_dict["half_class_maximum"])
+        settings_string += "\n \n"
+
+        settings_string += "# Max size of a partition when dividing students into four cohorts (default = 9) \n"
+        settings_string += "quarter_class_maximum : "
+        settings_string += str(settings_dict["quarter_class_maximum"])
+        settings_string += "\n \n"
+
+        settings_string += "# Time measured in minutes (default = 480 min or 8 hr) \n"
+        settings_string += "time_limit : "
+        settings_string += str(settings_dict["time_limit"])
+        settings_string += "\n \n"
+
+        settings_string += "# Filename of .csv file with student schedule data (default = 'example_student_data.csv') \n"
+        settings_string += "# Note: does not need to be an absolute path " 
+        settings_string += "as long as the .csv and .py are in the same folder \n"
+        settings_string += "input_csv_filename : "
+        if len(settings_dict["input_csv_filename"]) == 0:
+            settings_string += '""'
+        else:
+            settings_string += settings_dict["input_csv_filename"]
+        settings_string += "\n \n"
+
+        settings_string += "# Filename of .csv file with required student subgrouping data (default = 'example_subgroups.csv') \n"
+        settings_string += "# if no required subgroups are needed, set the value below to an empty string, REQUIRED_SUBGROUP_CSV_FILENAME = '' \n" 
+        settings_string += "required_subgroup_csv_filename : "
+        if len(settings_dict["required_subgroup_csv_filename"]) == 0:
+            settings_string += '""'
+        else:
+            settings_string += settings_dict["required_subgroup_csv_filename"]
+        settings_string += "\n \n"
+ 
+        settings_string += "# Filename of .csv file with preferred student subgrouping data (default = None) \n"
+        settings_string += "# if no required subgroups are needed, set the value below to an empty string, PREFERRED_SUBGROUP_CSV_FILENAME = '' \n" 
+        settings_string += "preferred_subgroup_csv_filename : "
+        if len(settings_dict["preferred_subgroup_csv_filename"]) == 0:
+            settings_string += '""'
+        else:
+            settings_string += settings_dict["preferred_subgroup_csv_filename"]
+        settings_string += "\n \n" 
+        
+        settings_string += "# GENETIC ALGORITHM SETTINGS \n \n"
+        settings_string += "# If you experiment with the following settings, you may happen upon a \n"
+        settings_string += "# combination of values that optimizes more efficiently than the default \n"
+        settings_string += "# settings in this program. If so, please share these values with me at \n"
+        settings_string += "# studentpartitionoptimizer@gmail.com so I can verify and make these the \n"
+        settings_string += "# new defaults. \n \n"   
+        
+        settings_string += "# recommended range: between 0.01 and 0.05, (default = 0.01) \n"
+        settings_string += "mutation_rate : "
+        settings_string += str(settings_dict["mutation_rate"])
+        settings_string += "\n \n"
+
+        settings_string += "# the optimal value here is going to depend a lot on number of cores,) \n"
+        settings_string += "# so you can play around with this to see what seems to work best \n"
+        settings_string += "# recommended range for a 16-core machine: 20 - 80 (default = 60) \n"
+        settings_string += "population_size : "
+        settings_string += str(settings_dict["population_size"])
+        settings_string += "\n \n"
+
+        settings_string += "# recommended range: run it for as long as you have time, or until the \n"
+        settings_string += "# [number of compliant sections] metric seems to plateau out \n"
+        settings_string += "# (default = 5000) \n"
+        settings_string += "number_of_eras : "
+        settings_string += str(settings_dict["number_of_eras"])
+        settings_string += "\n \n"
+
+        settings_string += "# with 16 cores, good results are obtained with a default value of 20 \n"
+        settings_string += "# but with fewer cores, you may want to increase this value \n"
+        settings_string += "# recommended range: 10 - 50 (default = 20) \n"
+        settings_string += "number_of_generations_per_era : "
+        settings_string += str(settings_dict["number_of_generations_per_era"])
+
+        with open(IO_DIRECTORY / 'settings.yaml', 'w+') as outfile:
+            # write dictionary with original comments to .yaml
+            outfile.write(settings_string)
 
 class ParallelGeneticAlgorithm(GeneticAlgorithm):        
     """
@@ -2690,7 +2776,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         cls.quarter_class_maximum = settings_dict["quarter_class_maximum"]
             
         cls.time_limit = settings_dict["time_limit"]
-            
+        
         if len(settings_dict["input_csv_filename"]) == 0:
             cls.student_csv_path = None
         else: 
@@ -2773,26 +2859,8 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             p.join()
 
 if __name__ == "__main__":
-    if GUI_BOOL:
+    if USE_GUI:
         root = Window()
         root.mainloop()
     else:
         ParallelGeneticAlgorithm.run_parallel()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
