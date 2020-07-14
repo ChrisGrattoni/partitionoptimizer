@@ -131,6 +131,22 @@ if PREFERRED_SUBGROUP_CSV_FILENAME is not None:
 # default width of the GUI window
 WINDOW_WIDTH = 600
 
+def popupmsg():
+    """JAKSHDJAKHSDJ"""
+    popup = tk.Tk()
+    popup.wm_title("Progress Bar")
+    progress = ttk.Progressbar(popup, orient = HORIZONTAL,
+                                length = 400, mode = 'determinate')
+    progress.grid(row = 1, column = 0)
+    for x in range(100):
+        progress['value'] += 1
+        progress.update()
+        time.sleep((ParallelGeneticAlgorithm.time_limit*60)/100)
+        
+    B1 = ttk.Button(popup, text="Exit", command = popup.destroy)
+    B1.grid(row =2, column = 0)
+    popup.mainloop()
+
 class Window(tk.Tk):
 
     def __init__(self, *args, **kwargs):
@@ -162,6 +178,7 @@ class Window(tk.Tk):
 class StartPage(tk.Frame):
 
     def __init__(self, parent, controller):
+        """AJSDAKSHDJAKSHDJK"""
         tk.Frame.__init__(self,parent)
      
         self.input_dict = {} 
@@ -185,7 +202,7 @@ class StartPage(tk.Frame):
         self.text_input("Max Runtime (Minutes)", 480, 10)
 
         button = tk.Button(self, text = "Start Partition Optimizer",
-                            command = lambda: self.launch(controller), width = WINDOW_WIDTH//tk.font.Font().measure(0))
+                            command = lambda: [self.launch(controller), popupmsg()])
         button.grid(row = 11, column = 0, columnspan = 2, sticky="NSEW")
 
     def launch(self, controller):
@@ -278,32 +295,15 @@ class StartPage(tk.Frame):
         label.configure(text="")
 
 class PageOne(tk.Frame):
-
+    """ahdjKSHDJAK"""
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         main_label = tk.Label(self, text = "Running Genetic Algorithm", font = ('bold', 18), padx = 10, pady = 10)
-        main_label.grid(row = 0, column = 0)
-        def step():
-                for x in range(100):
-                    progress['value'] += 1
-                    self.update_idletasks()
-                    time.sleep((ParallelGeneticAlgorithm.time_limit*60)/100)
-
-        def cancel():
-                progress.stop()
-        
-        progress = ttk.Progressbar(self, orient = HORIZONTAL,
-                                   length = 400, mode = 'determinate')
-        progress.grid(row = 1, column = 0)
-        
-        buttonStart = ttk.Button(self, text="Start", command = step)
-        buttonStart.grid(row = 2, column = 0)
-        buttonCancel = ttk.Button(self, text="Cancel", command = cancel)
-        buttonCancel.grid(row = 3, column = 0)
+        main_label.grid(row = 0, column = 2)
         
         button1 = ttk.Button(self, text="Back to Home",
                             command=lambda: controller.show_frame(StartPage))
-        button1.grid(row = 4, column = 0)
+        button1.grid(row = 2, column = 2)
 
      
 class Student:
