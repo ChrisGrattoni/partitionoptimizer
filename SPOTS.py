@@ -1,3 +1,4 @@
+   
 """
 Name: Student Partition Optimization Tool for Schools (SPOTS)
 
@@ -35,41 +36,13 @@ import warnings # used in run_loop() to remind users to close output reports
 import multiprocessing # run the genetic algorithm in parallel on multiple cores
 import os   # used for getting the process ID via os.getpid()
 from pathlib import Path # used for getting directory of SPOTS.py
-import numpy as np # used in creating pie charts
-import matplotlib.pyplot as plt # used to generate pie charts of compliance/out of compliance
-
-# SCHOOL-SPECIFIC SETTINGS:
-
-# number of groups to partition students into (only 2 and 4 are implemented)
-NUMBER_OF_PARTITIONS = 4
-
-# time measured in minutes (default = 480 min or 8 hr)
-TIME_LIMIT = 60*8 
-
-# max size of a partition when dividing students into two cohorts (default = 15) 
-HALF_CLASS_MAXIMUM = 15 
-
-# max size of a partition when dividing students into four cohorts (default = 9)
-QUARTER_CLASS_MAXIMUM = 9
-
-# filename of .csv file with student schedule data (default = "example_student_data.csv) 
-INPUT_CSV_FILENAME = "example_student_data.csv" 
-
-# filename of .csv file with required student subgrouping data (default = "example_subgroups.csv") 
-REQUIRED_SUBGROUP_CSV_FILENAME = "example_subgroups.csv" 
-# if no required subgroups are needed, set the above value to None
-
-# filename of .csv file with preferred student subgrouping data (default = None) 
-PREFERRED_SUBGROUP_CSV_FILENAME = None
-# if no preferred subgroups are needed, set the above value to None
-
-# GENETIC ALGORITHM SETTINGS
-# 
-# If you experiment with the following settings, you may happen upon a 
-# combination of values that optimizes more efficiently than the default 
-# settings in this program. If so, please share these values with me at 
-# studentpartitionoptimizer@gmail.com so I can verify and make these the 
-# new defaults. 
+import tkinter as tk # used in the GUI
+from tkinter import filedialog # used for the GUI file browser
+from tkinter import font # used to set the width of the "Start" button
+import threading # used to run the GUI and the parallel GA in separate threads
+import yaml # used to import settings from 'settings.yaml'
+import numpy as np # used to perform mathematical operations for graphs
+import matplotlib.pyplot as plt # used to create graphs of the data
 
 # number of processes to launch (must be >= 4)
 NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
@@ -79,45 +52,195 @@ NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
 # well in practice.
 NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND = NUMBER_OF_PROCESSES//4
 
-# recommended range: between 0.01 and 0.05, (default = 0.01)
-MUTATION_RATE = 0.01
-
-# on my 16-core machine, this seems to work best
-# (for each core/island, during the end-of-era crossbreeding stage:
-# 25% elites = top 15, then the remaining 45 is made up of
-# [15 neighboring islands to cross with] * [3 partitions per island]
-# the "right" value here is going to depend a lot on number of cores,
-# so you can play around with this to see what seems to work best
-# recommended range, at least according to my experimentation: 20 - 80
-POPULATION_SIZE = 60
-
-# recommended range: run it for as long as you have time, or until the
-# [number of compliant sections] metric seems to plateau out.
-NUMBER_OF_ERAS = 5000
-
-# in my experience while testing with 16 cores, a small number here made sense
-# (with more frequent crossbreeding between islands). i believe this is because
-# there are a lot of islands to cross with, and with 15 neighboring islands chances are
-# good that one of your neighbors has found some opimization feature that you haven't yet
-# if you have fewer cores, then i think this number should probably increase a bit
-# recommended range, at least according to my experimentation: 10 - 50
-NUMBER_OF_GENERATIONS_PER_ERA = 20
-
-# I/O DIRECTORY
-
 # gets the location of the .py file (also where input .csv files should be)
 IO_DIRECTORY = Path(os.path.dirname(__file__))
 
-# use pathlib Path object to convert slashes for
-# the current operating system
-INPUT_CSV_FILENAME = IO_DIRECTORY / INPUT_CSV_FILENAME
+with open(IO_DIRECTORY / 'settings.yaml') as infile:
+    # convert .yaml to dictionary
+    settings_dict = yaml.load(infile, Loader=yaml.FullLoader)
 
-if REQUIRED_SUBGROUP_CSV_FILENAME is not None:
-    REQUIRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY / REQUIRED_SUBGROUP_CSV_FILENAME
+# toggle GUI on/off based on the value in 'settings.yaml'
+USE_GUI = settings_dict["use_gui"]
 
-if PREFERRED_SUBGROUP_CSV_FILENAME is not None:
-    PREFERRED_SUBGROUP_CSV_FILENAME = IO_DIRECTORY / PREFERRED_SUBGROUP_CSV_FILENAME
+# default width of the GUI window from 'settings.yaml'
+WINDOW_WIDTH = settings_dict["window_width"]
 
+# our tkinter Window class
+class Window(tk.Tk):
+
+    def __init__(self, *args, **kwargs):
+        # inherit from tkinter
+        tk.Tk.__init__(self, *args, **kwargs)
+
+        # the title of the window
+        self.title("Student Partition Optimization Tool for Schools")
+      
+        # marked for deletion, this does not seem to improve the UI 
+        #self.grid_columnconfigure(7, weight=1)
+        
+        # the dimensions of the window (default 600 px by 400 px)
+        self.geometry(str(WINDOW_WIDTH) + 'x400') 
+        
+        # a dictionary of frames
+        self.frames = {}
+
+        for F in (StartPage, PageOne):
+
+            frame = F(self, self)
+
+            self.frames[F] = frame
+
+            frame.grid(row=0, column=0, sticky="nsew")
+
+        self.show_frame(StartPage)
+
+    # display frames
+    def show_frame(self, cont):
+
+        frame = self.frames[cont]
+        frame.tkraise()
+
+# the default landing page of the GUI        
+class StartPage(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self,parent)
+
+        # a dictionary of user-inputted values
+        self.input_dict = {} 
+        
+        # the top banner 
+        main_label = tk.Label(self, text = "Student Partition Optimization Tool for Schools", font = ('bold', 18), padx = 10, pady = 10)
+        
+        main_label.grid(sticky = "W", row = 0, column = 0, columnspan = 2)
+        
+        # text input for partition size, default value of 4, row 1        
+        self.text_input("Partition Size (2 or 4)", 4, 1)
+
+        # text input for 50% size, default value of 15, row 2      
+        self.text_input("Max Class Size (2 Groups)", 15, 2)
+
+        # text input for 25% size, default value of 9, row 3       
+        self.text_input("Max Class Size (4 Groups)", 9, 3)
+
+        # .csv file select for student course data, row 4
+        self.file_selector("Student Course Data:", 4)
+
+        # .csv file select for required subgroup data, row 6
+        self.file_selector("Required Student Subgroups:", 6)
+
+        # .csv file select for preferred subgroup data, row 8
+        self.file_selector("Preferred Student Subgroups:", 8)
+
+        # text input for max runtime, default value of 480 (8 hrs), row 10 
+        self.text_input("Max Runtime (Minutes)", 480, 10)
+
+        # the button that launches the genetic algorithm
+        button = tk.Button(self, text = "Start Partition Optimizer",
+                            command = lambda: self.launch(controller), width = WINDOW_WIDTH//tk.font.Font().measure(0))
+        
+        # place the button on the grid
+        button.grid(row = 11, column = 0, columnspan = 2, sticky="NSEW")
+
+    # the function that gets the settings from the GUI and uses these to 
+    # launch the genetic algorithm
+    def launch(self, controller):
+        # switch to the page that displays while the algorithm is running
+        controller.show_frame(PageOne)
+        
+        # update class attributes of the ParallelGeneticAlgorithm
+        # from the GUI using the 'settings.yaml' file
+        
+        # update settings from GUI for number_of_partitions
+        nop = self.input_dict["Partition Size (2 or 4)"]
+        nop = int(nop.get())
+        settings_dict["number_of_partitions"] = nop
+
+        # update settings from GUI for half_class_maximum                
+        hcm = self.input_dict["Max Class Size (2 Groups)"]
+        hcm = int(hcm.get())
+        settings_dict["half_class_maximum"] = hcm
+
+        # update settings from GUI for quarter_class_maximum                 
+        qcm = self.input_dict["Max Class Size (4 Groups)"]
+        qcm = int(qcm.get())
+        settings_dict["quarter_class_maximum"] = qcm
+        
+        # update settings from GUI for time_limit 
+        tlim = self.input_dict["Max Runtime (Minutes)"]
+        tlim = int(tlim.get())
+        settings_dict["time_limit"] = tlim
+
+        # update settings from GUI for input_csv_filename         
+        scp = self.input_dict["Student Course Data:"]
+        scp = scp["text"]
+        settings_dict["input_csv_filename"] = scp
+
+        # update settings from GUI for required_subgroup_csv_filename         
+        rss = self.input_dict["Required Student Subgroups:"]
+        rss = rss["text"]
+        settings_dict["required_subgroup_csv_filename"] = rss
+
+        # update settings from GUI for preferred_subgroup_csv_filename         
+        pss = self.input_dict["Preferred Student Subgroups:"]
+        pss = pss["text"]
+        settings_dict["preferred_subgroup_csv_filename"] = pss
+        
+        # call the yaml_writer method to write changes to 'settings.yaml'
+        Reports.yaml_writer(settings_dict)
+        
+        # launch genetic algorithm using these settings, but do 
+        # so in a separate thread to keep the GUI window responsive 
+        new_thread = threading.Thread(target = ParallelGeneticAlgorithm.run_parallel)
+        new_thread.start()
+
+    # helper method to place text input with a label, starting value & row placement
+    def text_input(self, label_text, default_value, starting_row):
+        text = tk.StringVar(self)
+        text.set(default_value)
+        label = tk.Label(self, text = label_text, font = ('bold', 12), padx = 10, pady = 10)
+        label.grid(sticky = "W", row = starting_row, column = 0)
+        entry = tk.Entry(self, textvariable = text)
+        self.input_dict[label_text] = entry
+        entry.grid(row = starting_row, column = 1)
+
+    # helper method to place file selector with label, starting row, Browse & Clear buttons
+    def file_selector(self, label_text, starting_row):
+        label = tk.Label(self, text = label_text, font = ('bold', 12), padx = 10)
+        label.grid(sticky = "W", row = starting_row, column = 0)
+
+        button_frame = tk.Frame(self)
+        button_frame.grid(row = starting_row, column = 1)
+
+        button = tk.Button(button_frame, text = "Browse", command = lambda: self.fileDialog(location_label))
+        button.grid(row = starting_row, column = 1)
+        button = tk.Button(button_frame, text = "Clear", command = lambda: self.clear(location_label))
+        button.grid(row = starting_row, column = 2)
+
+        location_label = tk.Label(self, text = "", width = WINDOW_WIDTH//tk.font.Font().measure(0))
+        self.input_dict[label_text] = location_label
+        location_label.grid(row = starting_row + 1, column = 0, columnspan = 2)
+
+    # a method to launch the file dialog 
+    def fileDialog(self, label):
+        filename = tk.filedialog.askopenfilename(initialdir =  "IO_DIRECTORY", title = "Select A File", filetype = (("csv","*.csv"),("all files","*.*")) )
+        label.configure(text = filename)
+
+    # a method to clear a label
+    def clear(self, label):
+        label.configure(text="")
+
+# the page of the GUI that displays while genetic algorithm is running
+# Note: eventually need to create "class EndPage" for when the algorithm 
+# completes its run
+class PageOne(tk.Frame):
+    # this is a placeholder for now
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        main_label = tk.Label(self, text = "Running Genetic Algorithm", font = ('bold', 18), padx = 10, pady = 10)
+        main_label.grid(row = 0, column = 0)
+
+    
 class Student:
     """
     A class used to store attributes about individual students, 
@@ -288,7 +411,7 @@ class Schedule:
         is taking place
     """
     
-    def __init__(self, number_of_partitions = 4, half_class_maximum = 15, quarter_class_maximum = 9):
+    def __init__(self, number_of_partitions, half_class_maximum, quarter_class_maximum):
         """
         The constructor for the Schedule class
         
@@ -1947,79 +2070,6 @@ class GeneticAlgorithm(Population):
         
         return self.population_obj.sorted_scored_population
 
-class Pie_Max_Score:
-    """
-    A threadsafe class for keeping track of the maximum fitness score of the partitions from each process 
-    (updated after every era)
-
-    Attributes
-    ----------
-    lock : multiprocessing.Lock() object
-        ensures modifications to shared variables are process safe
-    best_fitness_score : shared double
-        shared double between processes, stores the fitness score of the best partition found
-    best_in_compliance : shared int
-        shared integer between processes, stores the number of classrooms in compliance of the 
-        best partition found
-    total_courses : shared int
-        the total number of classrooms in effect
-
-    Methods
-    ----------
-    update_best_partition(self, cur_partition_score)
-        compares the cur_partition_score to the best fitness score found and updates it if the current
-        partition is better
-    get_score_values(self)
-        returns a tuple of (best_fitness_score, best_in_compliance, total_courses) for the best partition found
-    """
-
-    def __init__(self, initval = 0):
-        """
-        Parameters
-        ----------
-        lock: multiprocessing.Lock() object
-            used to ensure that modifications to shared memory are threadsafe
-        best_fitness_score: shared double
-            shared double between processes, used to store fitness score of best partition found
-        best_in_compliance: shared int
-            shared integer between processes, used to store number of classrooms in compliance
-            of the best partition found
-        total_courses: shared int
-            total number of classrooms in effect
-        """
-        self.lock = multiprocessing.Lock()
-        self.best_fitness_score = multiprocessing.Value('d', initval)
-        self.best_in_compliance = multiprocessing.Value('i', initval)
-        self.total_courses = multiprocessing.Value('i', initval)
-
-    def update_best_partition(self, cur_partition_score):
-        """
-        A method to update the best fitness scores if the next partition found is better
-
-        Parameters
-        ----------
-        cur_partition_score: tuple
-            the fitness score (and # in compliance, etc.) of the current partition found
-        """
-
-        with self.lock:
-            if (cur_partition_score[0] > self.best_fitness_score.value):
-                self.best_fitness_score.value = cur_partition_score[0]
-                self.best_in_compliance.value = cur_partition_score[2]
-                self.total_courses.value = cur_partition_score[-1]
-    
-    def get_score_values(self):
-        """
-        A method to retrieve the best fitness score values found 
-
-        Parameters
-        ----------
-        None
-        """
-        
-        with self.lock:
-            return self.best_fitness_score.value, self.best_in_compliance.value, self.total_courses.value
-
 class Reports:
     """
     A class for generating reports/visualizations of the algorithm's progress
@@ -2036,7 +2086,7 @@ class Reports:
         write a progress_string to the output log
     return_era_progress(cls, era_number, start_timer, end_timer, total_time)
         concatenate a string with parallel genetic algorithm progress
-    create_pie_chart(cls, pid_string, era_number, in_compliance, total_courses)
+    create_pie_chart(cls, era_number, fitness_score, in_compliance, total_courses)
         generates a pie chart visualizing the number of classrooms in/out of compliance
         with social distancing
     """
@@ -2128,14 +2178,16 @@ class Reports:
         return progress_string
 
     @classmethod
-    def create_pie_chart(cls, era_number, in_compliance, total_courses):
+    def create_pie_chart(cls, era_number, fitness_score, in_compliance, total_courses):
         """
         Creates a pie chart visualizing the portion of classrooms in compliance (green) vs. out of compliance (red)
-
         Parameters
         ----------
         era_number: int
             the current era number
+        
+        fitness_score: int
+            fitness score of best partition
 
         in_compliance: int
             the number of classrooms that satisfy social distancing guidelines as defined
@@ -2154,13 +2206,135 @@ class Reports:
             return str(np.round(pct)) + "% \n" + "(" + str(num) + " out of " + str(total_courses) + ")"
 
         fig, ax = plt.subplots(1, 1)
-        ax.set_title("Era " + str(era_number) + ": Classrooms In/Out of Compliance with Social Distancing")
+        title_string = "Era " + str(era_number) + ": Classrooms In/Out of Compliance with Social Distancing\n"
+        subtitle_string = "Fitness Score: " + str(fitness_score)
+
+        ax.set_title(title_string + subtitle_string)
         ax.pie(sizes, labels = labels, autopct = pie_label_string,
                 colors = colors, startangle = 90)
         ax.axis('equal')
 
         pie_file_name = "era" + str(era_number) + ".png"
         fig.savefig(pie_file_name, bbox_inches='tight')
+    
+    @classmethod
+    def yaml_writer(cls, settings_dict):
+        """
+        Write configuration to "settings.yaml" along with 
+        descriptive comments
+        
+        Note: yaml.dump method from the yaml module does 
+        not preserve comments, which is why this method
+        is necessary
+        
+        Parameters
+        ----------
+        settings_dict : dictionary
+            a dictionary of program settings from 'settings.yaml' 
+        """  
+        
+        # concatenate the .yaml document as a string
+        settings_string = "# SCHOOL-SPECIFIC SETTINGS: \n \n"
+
+        settings_string += "# Number of groups to partition students into (only 2 and 4 are implemented) \n"
+        settings_string += "number_of_partitions : "
+        settings_string += str(settings_dict["number_of_partitions"])
+        settings_string += "\n \n"
+
+        settings_string += "# Max size of a partition when dividing students into two cohorts (default = 15) \n"
+        settings_string += "half_class_maximum : "
+        settings_string += str(settings_dict["half_class_maximum"])
+        settings_string += "\n \n"
+
+        settings_string += "# Max size of a partition when dividing students into four cohorts (default = 9) \n"
+        settings_string += "quarter_class_maximum : "
+        settings_string += str(settings_dict["quarter_class_maximum"])
+        settings_string += "\n \n"
+
+        settings_string += "# Time measured in minutes (default = 480 min or 8 hr) \n"
+        settings_string += "time_limit : "
+        settings_string += str(settings_dict["time_limit"])
+        settings_string += "\n \n"
+
+        settings_string += "# Filename of .csv file with student schedule data (default = 'example_student_data.csv') \n"
+        settings_string += "# Note: does not need to be an absolute path " 
+        settings_string += "as long as the .csv and .py are in the same folder \n"
+        settings_string += "input_csv_filename : "
+        if len(settings_dict["input_csv_filename"]) == 0:
+            settings_string += '""'
+        else:
+            settings_string += settings_dict["input_csv_filename"]
+        settings_string += "\n \n"
+
+        settings_string += "# Filename of .csv file with required student subgrouping data (default = 'example_subgroups.csv') \n"
+        settings_string += "# if no required subgroups are needed, set the value below to an empty string, REQUIRED_SUBGROUP_CSV_FILENAME = '' \n" 
+        settings_string += "required_subgroup_csv_filename : "
+        if len(settings_dict["required_subgroup_csv_filename"]) == 0:
+            settings_string += '""'
+        else:
+            settings_string += settings_dict["required_subgroup_csv_filename"]
+        settings_string += "\n \n"
+ 
+        settings_string += "# Filename of .csv file with preferred student subgrouping data (default = None) \n"
+        settings_string += "# if no required subgroups are needed, set the value below to an empty string, PREFERRED_SUBGROUP_CSV_FILENAME = '' \n" 
+        settings_string += "preferred_subgroup_csv_filename : "
+        if len(settings_dict["preferred_subgroup_csv_filename"]) == 0:
+            settings_string += '""'
+        else:
+            settings_string += settings_dict["preferred_subgroup_csv_filename"]
+        settings_string += "\n \n" 
+        
+        settings_string += "# GENETIC ALGORITHM SETTINGS \n \n"
+        settings_string += "# If you experiment with the following settings, you may happen upon a \n"
+        settings_string += "# combination of values that optimizes more efficiently than the default \n"
+        settings_string += "# settings in this program. If so, please share these values with me at \n"
+        settings_string += "# studentpartitionoptimizer@gmail.com so I can verify and make these the \n"
+        settings_string += "# new defaults. \n \n"   
+        
+        settings_string += "# recommended range: between 0.01 and 0.05, (default = 0.01) \n"
+        settings_string += "mutation_rate : "
+        settings_string += str(settings_dict["mutation_rate"])
+        settings_string += "\n \n"
+
+        settings_string += "# the optimal value here is going to depend a lot on number of cores,) \n"
+        settings_string += "# so you can play around with this to see what seems to work best \n"
+        settings_string += "# recommended range for a 16-core machine: 20 - 80 (default = 60) \n"
+        settings_string += "population_size : "
+        settings_string += str(settings_dict["population_size"])
+        settings_string += "\n \n"
+
+        settings_string += "# recommended range: run it for as long as you have time, or until the \n"
+        settings_string += "# [number of compliant sections] metric seems to plateau out \n"
+        settings_string += "# (default = 5000) \n"
+        settings_string += "number_of_eras : "
+        settings_string += str(settings_dict["number_of_eras"])
+        settings_string += "\n \n"
+
+        settings_string += "# with 16 cores, good results are obtained with a default value of 20 \n"
+        settings_string += "# but with fewer cores, you may want to increase this value \n"
+        settings_string += "# recommended range: 10 - 50 (default = 20) \n"
+        settings_string += "number_of_generations_per_era : "
+        settings_string += str(settings_dict["number_of_generations_per_era"])
+        settings_string += "\n \n" 
+        
+        settings_string += "# GUI SETTINGS \n \n"
+
+        settings_string += "# toggle the GUI on/off using True or False \n"
+        settings_string += "# (default = True) \n"
+        settings_string += "use_gui : "
+        settings_string += str(settings_dict["use_gui"]) 
+        settings_string += "\n \n"
+        
+        settings_string += "# default width of the GUI window \n"
+        settings_string += "# measured in pixels (default = 600) \n"
+        settings_string += "window_width : "
+        settings_string += str(settings_dict["window_width"]) 
+        settings_string += "\n \n"
+
+        # write settings_string to 'settings.yaml'
+        with open(IO_DIRECTORY / 'settings.yaml', 'w+') as outfile:
+            # write dictionary with original comments to .yaml
+            outfile.write(settings_string)
 
 class ParallelGeneticAlgorithm(GeneticAlgorithm):        
     """
@@ -2232,55 +2406,77 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         then periodically crossbreed between islands
     """
 
-    # class attributes (references to global variables at top of document)
-    number_of_processes = NUMBER_OF_PROCESSES
     io_directory = IO_DIRECTORY
-    student_csv_path = INPUT_CSV_FILENAME
-    required_subgroups_csv_path = REQUIRED_SUBGROUP_CSV_FILENAME
-    preferred_subgroups_csv_path = PREFERRED_SUBGROUP_CSV_FILENAME
-    number_of_partitions = NUMBER_OF_PARTITIONS
-    half_class_maximum = HALF_CLASS_MAXIMUM
-    quarter_class_maximum = QUARTER_CLASS_MAXIMUM
-    pop_size = POPULATION_SIZE
-    rate_of_mutation = MUTATION_RATE
-    max_era = NUMBER_OF_ERAS
-    max_gen = NUMBER_OF_GENERATIONS_PER_ERA
-    time_limit = TIME_LIMIT
-    number_of_tournament_reps_per_island = NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND
+
+    # get config from 'settings.yaml'
+    with open(IO_DIRECTORY / 'settings.yaml') as infile:
+        # convert .yaml to dictionary
+        settings_dict = yaml.load(infile, Loader=yaml.FullLoader)
+
+    # assign class attributes based on the values in settings_dict
+    number_of_partitions = settings_dict["number_of_partitions"]
+    half_class_maximum = settings_dict["half_class_maximum"]
+    quarter_class_maximum = settings_dict["quarter_class_maximum"]
+    time_limit = settings_dict["time_limit"]
+    rate_of_mutation = settings_dict["mutation_rate"]
+    pop_size = settings_dict["population_size"]
+    max_era = settings_dict["number_of_eras"]
+    max_gen = settings_dict["number_of_generations_per_era"]
     
+    if len(settings_dict["input_csv_filename"]) == 0:
+        student_csv_path = None
+    else: 
+        student_csv_path = io_directory / settings_dict["input_csv_filename"]
+
+    if len(settings_dict["required_subgroup_csv_filename"]) == 0:
+        required_subgroups_csv_path = None
+    else: 
+        required_subgroups_csv_path = io_directory / settings_dict["required_subgroup_csv_filename"]
+        
+    if len(settings_dict["preferred_subgroup_csv_filename"]) == 0:
+        preferred_subgroups_csv_path = None
+    else: 
+        preferred_subgroups_csv_path = io_directory / settings_dict["preferred_subgroup_csv_filename"]
+
+    # global variables set at the top of page 
+    number_of_processes = NUMBER_OF_PROCESSES 
+    number_of_tournament_reps_per_island = NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND
+
     @classmethod
-    def run_era(cls, out_queue, in_queue, pie_max_score):
+    def run_era(cls, 
+                number_of_partitions, 
+                half_class_maximum,
+                quarter_class_maximum,
+                student_csv_path,
+                required_subgroups_csv_path,
+                preferred_subgroups_csv_path,
+                out_queue, 
+                in_queue):
+        
         """
         Repeat the Genetic Algorithm based on a specified number of generations (or time limit)
                     
         Parameters
         ----------
+        number_of_partitions : int
+            the number of partitions to separate students into
+            2 for an A/B partition
+            4 for an A/B/C/D partition
+            Note: Other values are not implemented
+        half_class_maximum : int
+            the maximum desired size when dividing a classroom in half_class_maximum
+        quarter_class_maximum : int 
+            the maximum desired size when dividing a class into quarters
         student_csv_path : str
             the location of the input.csv with student schedule data
         required_subgroups_csv_path : str
             the location of the input.csv with required subgrouping data
         preferred_subgroups_csv_path : str
             the location of the input.csv with preferred subgrouping data
-        number_of_partitions: int
-            the number of partitions to group students into
-            2 for an A/B partition
-            4 for an A/B/C/D partition
-            Note: Other values are not implemented
-        pop_size: int
-            the size of the population in the genetic algorithm
-        rate_of_mutation: float
-            the mutation rate in the genetic algorithm
-        max_era: int
-            the number of eras to run
-        max_gen: int
-            the number of generations per era to run the algorithm
         out_queue: multiprocessing.Queue()
             threadsafe outbound queue, used to report final population to main()
         in_queue: multiprocessing.Queue()
             threadsafe inbound queue, used to receive crossbred population from main()
-        pie_max_score: Pie_Max_Score object
-            threadsafe object used to store the fitness score (incl. number in compliance, etc) of the
-            best partition found
         """     
         
         # this function is run by child processes that main() launches, so grab the process ID for logging purposes
@@ -2292,25 +2488,22 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         # start the timer
         start_timer = time.perf_counter()
         
-        generation_number = 1
-        era_number = 0
-        
         # instantiate the Schedule object
-        load_schedule = Schedule(cls.number_of_partitions, cls.half_class_maximum, cls.quarter_class_maximum)
+        load_schedule = Schedule(number_of_partitions, half_class_maximum, quarter_class_maximum)
         
         # load school data into the Schedule object
-        load_schedule.students_from_csv(cls.student_csv_path)
+        load_schedule.students_from_csv(student_csv_path)
         
         # load required subgroups into the Schedule object
-        load_schedule.subgroups_from_csv(cls.required_subgroups_csv_path, "required")    
+        load_schedule.subgroups_from_csv(required_subgroups_csv_path, "required")    
         
         # load preferred subgroups into the Schedule object
-        load_schedule.subgroups_from_csv(cls.preferred_subgroups_csv_path, "preferred")
+        load_schedule.subgroups_from_csv(preferred_subgroups_csv_path, "preferred")
         
         # instantiate the IndividualPartition object
         first_partition = IndividualPartition(load_schedule)
         
-        # instatiate the Population object
+        # instantiate the Population object
         population = Population(first_partition, cls.pop_size)
         
         # populate with random individuals for the first generation
@@ -2318,8 +2511,9 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         
         # score this initial population
         population.population_fitness()
-        
+
         # instantiate the GeneticAlgorithm object
+        generation_number = 1
         first_generation = GeneticAlgorithm(population, generation_number, cls.rate_of_mutation)
         
         # generate Generation #2
@@ -2329,10 +2523,6 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         # track the time this process took:
         end_timer = time.perf_counter()
         timer_total += end_timer - start_timer
-
-        # Uncomment below to track how long this took:
-        # (This includes the initial CSV load, so it will be a bit longer than the general case)
-        # print("Benchmark result = " + str(end_timer - start_timer))
         
         # get algorithm progress
         progress = Reports.return_progress(process_ID_as_string, generation_number, previous_population, timer_total)
@@ -2373,36 +2563,22 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             # write algorithm progress to file
             Reports.write_progress(cls.io_directory, progress, 'a')
 
-        """
-        Now that this era is done, this island process must send its findings back to main(). We can
-        represent our findings as a sorted list: [partition1, partition2, ...], where partition1 is the
-        best, partition2 is second best, etc.
-        
-        Due to some limitations of Python interprocess communication, we represent each partition as a
-        list of letters rather than an actual IndividualPartition() object.
-        
-            Example representation:    [ ["A", "C", "B"], ["B", "A", "C"], ["C", 'C", "A"], ...]
 
-        This would mean that, on this island, the most successful partition we found was ["A", "C", "B"]; the
-        second most successful partition we found was ["B", "A", "C"]; and so on.
         """
-        era_number += 1
+        with the generations done, this island process must send its findings back to main(). We can
+        represent our findings as a sorted list, where each item is a list composed of a partition
+        and its corresponding fitness score. So the first item is [score1, partition1];
+        the second item is [score2, partition2]; and so on, where partition1 is better
+        than partition2, partition2 is better than partition3, etc.
+        """
+
         result_population = []
 
         for item in previous_population:
-            result_population.append(item[1])
+            result_population.append(item)
 
         out_queue.put(result_population)
 
-        # update the fitness score of the best partition found at the end of every era
-        pie_max_score.update_best_partition(previous_population[0][0])
-
-        # at the end of an era, write a student assignment report
-        # and a course-by-course analysis report
-        final_partition = previous_population[0][1]
-        load_schedule.load_partition(final_partition)
-        load_schedule.write_student_assignments()
-        load_schedule.write_course_analysis()
 
         """
         This island process just finished its first era, after having read in the CSV file
@@ -2412,7 +2588,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         population via in_queue, then load that population into our genetic algorithm,
         and compute another era. And so on.
         """
-        while era_number < cls.max_era:
+        while True:
             # This is a blocking call until we receive a crossbred population from main()
             crossbred_population = in_queue.get()
 
@@ -2436,6 +2612,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             first_generation.generate_next_generation()
             previous_population = first_generation.next_generation
             
+
             # track the time this process took
             end_timer = time.perf_counter()
             timer_total += end_timer - start_timer
@@ -2479,26 +2656,13 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             result_population = []
 
             for item in previous_population:
-                result_population.append(item[1])
+                result_population.append(item)
 
             out_queue.put(result_population)
 
-            # at the end of an era, write a student assignment report
-            # and a course-by-course analysis report
-            final_partition = previous_population[0][1]
-            load_schedule.load_partition(final_partition)
-            load_schedule.write_student_assignments()
-            load_schedule.write_course_analysis()
+            # we've completed one more era, now we go back to the start of "while True" loop,
+            # where we wait for main() to send the crossbred population back to us
 
-            # now we go back to the start of "while True" loop, where we wait
-            # for main() to send the crossbred population back to us
-            era_number += 1
-
-            # update the fitness score of the best partition found at the end of every era
-            pie_max_score.update_best_partition(previous_population[0][0])
-
-        # We ran all of the eras we were supposed to run, we can exit now
-        return 0
 
     @classmethod
     def get_crossed_children(cls, population1, population2, num_children, num_tournament_reps):
@@ -2514,10 +2678,10 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         Parameters
         ----------
         population1:
-            represents the population of an island: [ ["A", "B", ...], ["B", "C", ...], ... ]
+            represents the population of an island, includes scores: [ [score1, ["A", "B", ...]], [score2, ["B", "C", ...]], ... ]
             parent1 will be selected from this
         population2:
-            represents the population of an island: [ ["A", "B", ...], ["B", "C", ...], ... ]
+            represents the population of an island, includes scores: [ [score1, ["A", "B", ...]], [score2, ["B", "C", ...]], ... ]
             parent2 will be selected from this
         num_children: int
             number of children to generate and return
@@ -2531,14 +2695,14 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         # list to store the children
         crossed_children_list = []
         
-        for _ in range(num_children//2):
+        for _ in range( (num_children+1) // 2 ):
             # select the two parents using tournament selection
             # the number 4 is somewhat arbitrary, but seems to work well in practice
             parent1_index = GeneticAlgorithm.tournament_winner_index(population_size, num_tournament_reps)
-            parent1 = population1[parent1_index]
+            parent1 = population1[parent1_index][1]     # [1] is because we just want the partition part, not the score part
             
             parent2_index = GeneticAlgorithm.tournament_winner_index(population_size, num_tournament_reps)
-            parent2 = population2[parent2_index]
+            parent2 = population2[parent2_index][1]
             
             # length of a partition
             genome_length = len(parent1)
@@ -2567,17 +2731,24 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         Parameters
         ----------
         island_populations:
-            a list of island populations of the form [population1, population2, ...]
-            each population is of the form [partition1, partition2, ...]
+            a list of island populations of the form [population1, population2, ...], where
+            each population is of the form [ [score1, partition1], [score2, partition2], ... ], where
             each partition is of the form ["A", "C", ...]
 
             putting all this together, island_populations is of the form:
-            [ [["A", "B", ...], ["B", "C", ...], ...],      <-- population1
-              [["C", "B", ...], ["A", "A", ...], ...],      <-- population2
-              ...                                    ,      <-- population3
+            [ [ [score11, ["A", "B", ...]], [score12, ["B", "C", ...]], ...],      <-- population1
+              [ [score21, ["C", "B", ...]], [score22, ["A", "A", ...]], ...],      <-- population2
+              [ [score31, ["B", "B", ...]], [score32, ["C", "A", ...]], ...],      <-- population3
               ...
-            ]    
+            ]  
 
+        output value:  
+            similar to the input value island_populations, EXCEPT we do NOT include the scores.
+            so it ends up looking like:
+            [ [ ["B", "A", ...], ["C", "B", ...], ...],      <-- population1
+              [ ["C", "C", ...], ["C", "A", ...], ...],      <-- population2
+              ...
+            ]
         """    
         
         # each population keeps the top 25% elites
@@ -2590,8 +2761,9 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         for i in range(number_of_islands):
             crossed_pop = crossed_populations[i]
             orig_pop = island_populations[i]
-            crossed_pop.extend([item for item in orig_pop[0:num_elites]])
+            crossed_pop.extend([item[1] for item in orig_pop[0:num_elites]])    # item[1] b/c we only want the partition
         
+
         # for each island population, the remaining 75% is composed of 
         # [crossing with each of the other (number_of_islands - 1) islands].
 
@@ -2662,15 +2834,76 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         # main() can then send the crossbred populations back to the "island" processes via this threadsafe queue
         crossbred_population_queue = multiprocessing.Queue()
 
-        # stores the fitness scores for the best partition found every era
-        pie_max_score = Pie_Max_Score()
-
         # store the processes that we launch in a list
         island_processes = []
 
+        """
+        try:
+            cls.number_of_partitions = cls.number_of_partitions.value
+        except TypeError:
+            pass
+
+        try:
+            cls.half_class_maximum = cls.half_class_maximum.value
+        except TypeError:
+            pass
+            
+        try:
+            cls.quarter_class_maximum = cls.quarter_class_maximum.value
+        except TypeError:
+            pass
+
+        try:
+            cls.time_limit = cls.time_limit.value
+        except TypeError:
+            pass
+        """
+        
+        with open(IO_DIRECTORY / 'settings.yaml') as infile:
+            # convert .yaml to dictionary
+            settings_dict = yaml.load(infile, Loader=yaml.FullLoader)
+
+        cls.number_of_partitions = settings_dict["number_of_partitions"]
+                    
+        cls.half_class_maximum = settings_dict["half_class_maximum"]
+                    
+        cls.quarter_class_maximum = settings_dict["quarter_class_maximum"]
+            
+        cls.time_limit = settings_dict["time_limit"]
+        
+        if len(settings_dict["input_csv_filename"]) == 0:
+            cls.student_csv_path = None
+        else: 
+            cls.student_csv_path = cls.io_directory / settings_dict["input_csv_filename"]
+
+        if len(settings_dict["required_subgroup_csv_filename"]) == 0:
+            cls.required_subgroups_csv_path = None
+        else: 
+            cls.required_subgroups_csv_path = cls.io_directory / settings_dict["required_subgroup_csv_filename"]
+            
+        if len(settings_dict["preferred_subgroup_csv_filename"]) == 0:
+            cls.preferred_subgroups_csv_path = None
+        else: 
+            cls.preferred_subgroups_csv_path = cls.io_directory / settings_dict["preferred_subgroup_csv_filename"]
+       
+
+        # prepare load_schedule to be used later for writing out student assignments and
+        # course analysis at the end of each era
+        load_schedule = Schedule(cls.number_of_partitions, cls.half_class_maximum, cls.quarter_class_maximum)
+        load_schedule.students_from_csv(cls.student_csv_path)        
+        load_schedule.subgroups_from_csv(cls.required_subgroups_csv_path, "required")    
+        load_schedule.subgroups_from_csv(cls.preferred_subgroups_csv_path, "preferred")
+
         # instantiate NUMBER_OF_PROCESSES island processes, each of which will execute self.run_era()
         for _ in range(0, cls.number_of_processes):
-            p = multiprocessing.Process(target=cls.run_era, args=(island_population_queue, crossbred_population_queue, pie_max_score))
+            p = multiprocessing.Process(target=cls.run_era, args=(cls.number_of_partitions, 
+                                                                  cls.half_class_maximum, 
+                                                                  cls.quarter_class_maximum, 
+                                                                  cls.student_csv_path, 
+                                                                  cls.required_subgroups_csv_path, 
+                                                                  cls.preferred_subgroups_csv_path, 
+                                                                  island_population_queue, 
+                                                                  crossbred_population_queue))
             island_processes.append(p)
 
         # start the processes
@@ -2696,9 +2929,23 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             for i in range(cls.number_of_processes):
                 island_populations.append(island_population_queue.get())
 
-            # now that we have a population from each island, crossbreed
-            # both the input (island_populations) and the output (crossed_populations)
-            # is represented as a list of populations
+            # before we start crossbreeding, we first log the current chamption partition out of all the islands
+            island_populations.sort(reverse = True)
+            champion_partition = island_populations[0][0][1]
+            load_schedule.load_partition(champion_partition)
+            load_schedule.write_student_assignments()
+            load_schedule.write_course_analysis()
+
+            # fetch info for creating a pie chart for the champion partition this era
+            champion_partition_score = island_populations[0][0][0]
+            champion_fitness_score = champion_partition_score[0]
+            champion_in_compliance = champion_partition_score[2]
+            total_courses = champion_partition_score[-1]
+
+            # uncomment the below line to output info about the champion partition
+            # print("CURRENT HIGH FITNESS SCORE: " + str(island_populations[0][0]))
+
+            # now that we've saved all info about the current champion, we can crossbreed
             crossed_populations = cls.crossbreed_islands(island_populations, cls.number_of_processes, cls.number_of_tournament_reps_per_island)
 
             # send this crossed population back to the island process via crossbred_population_queue
@@ -2707,31 +2954,29 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             for item in crossed_populations:
                 crossbred_population_queue.put(item)
 
-            # we're done with this era
-            era_number += 1
-
             # log time elapsed
             end_timer = time.perf_counter()
             total_time += (end_timer - start_timer)
 
-            # get current progress
+            # we've completed one more era, log progress and we're done
+            era_number += 1
+
+            # create a pie chart
+            Reports.create_pie_chart(era_number, champion_fitness_score, champion_in_compliance, total_courses)
+
             progress = Reports.return_era_progress(era_number, start_timer, end_timer, total_time)
-            
-            # print current progress
             print(progress)
-            
-            # write out current progress
             Reports.write_progress(cls.io_directory, progress, 'a')
 
-            # retrieve the fitness score info. of the best partition found this era
-            best_fitness_score, best_in_compliance, total_courses = pie_max_score.get_score_values()     
-
-            # make a pie chart for the best partition found this era
-            Reports.create_pie_chart(era_number, best_in_compliance, total_courses)
-            
-        # wait for all processes to exit
+        # we're done, exit
         for p in island_processes:
+            p.terminate()
             p.join()
 
+
 if __name__ == "__main__":
-    ParallelGeneticAlgorithm.run_parallel()
+    if USE_GUI:
+        root = Window()
+        root.mainloop()
+    else:
+        ParallelGeneticAlgorithm.run_parallel()
