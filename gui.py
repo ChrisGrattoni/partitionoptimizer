@@ -37,10 +37,10 @@ import multiprocessing # run the genetic algorithm in parallel on multiple cores
 import os   # used for getting the process ID via os.getpid()
 from pathlib import Path # used for getting directory of SPOTS.py
 import tkinter as tk # used in the GUI
-from tkinter import filedialog, font # used for the GUI file browser
-#from tkinter import font # used to set the width of the "Start" button
+from tkinter import filedialog # used for the GUI file browser
+from tkinter import font # used to set the width of the "Start" button
 import threading # used to run the GUI and the parallel GA in separate threads
-import yaml # used to import settings from settings.yaml
+import yaml # used to import settings from 'settings.yaml'
 
 # number of processes to launch (must be >= 4)
 NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
@@ -57,23 +57,29 @@ with open(IO_DIRECTORY / 'settings.yaml') as infile:
     # convert .yaml to dictionary
     settings_dict = yaml.load(infile, Loader=yaml.FullLoader)
 
-# toggle GUI on/off
-USE_GUI = False
+# toggle GUI on/off based on the value in 'settings.yaml'
+USE_GUI = settings_dict["use_gui"]
 
-# default width of the GUI window
-WINDOW_WIDTH = 600
+# default width of the GUI window from 'settings.yaml'
+WINDOW_WIDTH = settings_dict["window_width"]
 
+# our tkinter Window class
 class Window(tk.Tk):
 
     def __init__(self, *args, **kwargs):
+        # inherit from tkinter
         tk.Tk.__init__(self, *args, **kwargs)
 
+        # the title of the window
         self.title("Student Partition Optimization Tool for Schools")
       
-        self.grid_columnconfigure(7, weight=1)
+        # marked for deletion, this does not seem to improve the UI 
+        #self.grid_columnconfigure(7, weight=1)
         
+        # the dimensions of the window (default 600 px by 400 px)
         self.geometry(str(WINDOW_WIDTH) + 'x400') 
         
+        # a dictionary of frames
         self.frames = {}
 
         for F in (StartPage, PageOne):
@@ -86,79 +92,107 @@ class Window(tk.Tk):
 
         self.show_frame(StartPage)
 
+    # display frames
     def show_frame(self, cont):
 
         frame = self.frames[cont]
         frame.tkraise()
-        
+
+# the default landing page of the GUI        
 class StartPage(tk.Frame):
 
     def __init__(self, parent, controller):
         tk.Frame.__init__(self,parent)
-     
+
+        # a dictionary of user-inputted values
         self.input_dict = {} 
         
+        # the top banner 
         main_label = tk.Label(self, text = "Student Partition Optimization Tool for Schools", font = ('bold', 18), padx = 10, pady = 10)
         
         main_label.grid(sticky = "W", row = 0, column = 0, columnspan = 2)
         
+        # text input for partition size, default value of 4, row 1        
         self.text_input("Partition Size (2 or 4)", 4, 1)
-        
+
+        # text input for 50% size, default value of 15, row 2      
         self.text_input("Max Class Size (2 Groups)", 15, 2)
-        
+
+        # text input for 25% size, default value of 9, row 3       
         self.text_input("Max Class Size (4 Groups)", 9, 3)
-        
+
+        # .csv file select for student course data, row 4
         self.file_selector("Student Course Data:", 4)
 
+        # .csv file select for required subgroup data, row 6
         self.file_selector("Required Student Subgroups:", 6)
 
+        # .csv file select for preferred subgroup data, row 8
         self.file_selector("Preferred Student Subgroups:", 8)
 
+        # text input for max runtime, default value of 480 (8 hrs), row 10 
         self.text_input("Max Runtime (Minutes)", 480, 10)
 
+        # the button that launches the genetic algorithm
         button = tk.Button(self, text = "Start Partition Optimizer",
                             command = lambda: self.launch(controller), width = WINDOW_WIDTH//tk.font.Font().measure(0))
+        
+        # place the button on the grid
         button.grid(row = 11, column = 0, columnspan = 2, sticky="NSEW")
 
+    # the function that gets the settings from the GUI and uses these to 
+    # launch the genetic algorithm
     def launch(self, controller):
+        # switch to the page that displays while the algorithm is running
         controller.show_frame(PageOne)
         
         # update class attributes of the ParallelGeneticAlgorithm
-        # from the GUI using shared memory (multiprocessing.Value)
+        # from the GUI using the 'settings.yaml' file
         
+        # update settings from GUI for number_of_partitions
         nop = self.input_dict["Partition Size (2 or 4)"]
         nop = int(nop.get())
         settings_dict["number_of_partitions"] = nop
-                
+
+        # update settings from GUI for half_class_maximum                
         hcm = self.input_dict["Max Class Size (2 Groups)"]
         hcm = int(hcm.get())
         settings_dict["half_class_maximum"] = hcm
-                
+
+        # update settings from GUI for quarter_class_maximum                 
         qcm = self.input_dict["Max Class Size (4 Groups)"]
         qcm = int(qcm.get())
         settings_dict["quarter_class_maximum"] = qcm
         
+        # update settings from GUI for time_limit 
         tlim = self.input_dict["Max Runtime (Minutes)"]
         tlim = int(tlim.get())
         settings_dict["time_limit"] = tlim
-        
+
+        # update settings from GUI for input_csv_filename         
         scp = self.input_dict["Student Course Data:"]
         scp = scp["text"]
         settings_dict["input_csv_filename"] = scp
-        
+
+        # update settings from GUI for required_subgroup_csv_filename         
         rss = self.input_dict["Required Student Subgroups:"]
         rss = rss["text"]
         settings_dict["required_subgroup_csv_filename"] = rss
-        
+
+        # update settings from GUI for preferred_subgroup_csv_filename         
         pss = self.input_dict["Preferred Student Subgroups:"]
         pss = pss["text"]
         settings_dict["preferred_subgroup_csv_filename"] = pss
         
+        # call the yaml_writer method to write changes to 'settings.yaml'
         Reports.yaml_writer(settings_dict)
-               
+        
+        # launch genetic algorithm using these settings, but do 
+        # so in a separate thread to keep the GUI window responsive 
         new_thread = threading.Thread(target = ParallelGeneticAlgorithm.run_parallel)
         new_thread.start()
 
+    # helper method to place text input with a label, starting value & row placement
     def text_input(self, label_text, default_value, starting_row):
         text = tk.StringVar(self)
         text.set(default_value)
@@ -168,6 +202,7 @@ class StartPage(tk.Frame):
         self.input_dict[label_text] = entry
         entry.grid(row = starting_row, column = 1)
 
+    # helper method to place file selector with label, starting row, Browse & Clear buttons
     def file_selector(self, label_text, starting_row):
         label = tk.Label(self, text = label_text, font = ('bold', 12), padx = 10)
         label.grid(sticky = "W", row = starting_row, column = 0)
@@ -184,20 +219,26 @@ class StartPage(tk.Frame):
         self.input_dict[label_text] = location_label
         location_label.grid(row = starting_row + 1, column = 0, columnspan = 2)
 
+    # a method to launch the file dialog 
     def fileDialog(self, label):
         filename = tk.filedialog.askopenfilename(initialdir =  "IO_DIRECTORY", title = "Select A File", filetype = (("csv","*.csv"),("all files","*.*")) )
         label.configure(text = filename)
 
+    # a method to clear a label
     def clear(self, label):
         label.configure(text="")
 
+# the page of the GUI that displays while genetic algorithm is running
+# Note: eventually need to create "class EndPage" for when the algorithm 
+# completes its run
 class PageOne(tk.Frame):
-
+    # this is a placeholder for now
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         main_label = tk.Label(self, text = "Running Genetic Algorithm", font = ('bold', 18), padx = 10, pady = 10)
         main_label.grid(row = 0, column = 0)
-     
+
+    
 class Student:
     """
     A class used to store attributes about individual students, 
@@ -2133,6 +2174,21 @@ class Reports:
     
     @classmethod
     def yaml_writer(cls, settings_dict):
+        """
+        Write configuration to "settings.yaml" along with 
+        descriptive comments
+        
+        Note: yaml.dump method from the yaml module does 
+        not preserve comments, which is why this method
+        is necessary
+        
+        Parameters
+        ----------
+        settings_dict : dictionary
+            a dictionary of program settings from 'settings.yaml' 
+        """  
+        
+        # concatenate the .yaml document as a string
         settings_string = "# SCHOOL-SPECIFIC SETTINGS: \n \n"
 
         settings_string += "# Number of groups to partition students into (only 2 and 4 are implemented) \n"
@@ -2214,7 +2270,23 @@ class Reports:
         settings_string += "# recommended range: 10 - 50 (default = 20) \n"
         settings_string += "number_of_generations_per_era : "
         settings_string += str(settings_dict["number_of_generations_per_era"])
+        settings_string += "\n \n" 
+        
+        settings_string += "# GUI SETTINGS \n \n"
 
+        settings_string += "# toggle the GUI on/off using True or False \n"
+        settings_string += "# (default = True) \n"
+        settings_string += "use_gui : "
+        settings_string += str(settings_dict["use_gui"]) 
+        settings_string += "\n \n"
+        
+        settings_string += "# default width of the GUI window \n"
+        settings_string += "# measured in pixels (default = 600) \n"
+        settings_string += "window_width : "
+        settings_string += str(settings_dict["window_width"]) 
+        settings_string += "\n \n"
+
+        # write settings_string to 'settings.yaml'
         with open(IO_DIRECTORY / 'settings.yaml', 'w+') as outfile:
             # write dictionary with original comments to .yaml
             outfile.write(settings_string)
@@ -2291,18 +2363,21 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
 
     io_directory = IO_DIRECTORY
 
+    # get config from 'settings.yaml'
     with open(IO_DIRECTORY / 'settings.yaml') as infile:
         # convert .yaml to dictionary
         settings_dict = yaml.load(infile, Loader=yaml.FullLoader)
 
+    # assign class attributes based on the values in settings_dict
     number_of_partitions = settings_dict["number_of_partitions"]
-                
     half_class_maximum = settings_dict["half_class_maximum"]
-                
     quarter_class_maximum = settings_dict["quarter_class_maximum"]
-        
     time_limit = settings_dict["time_limit"]
-        
+    rate_of_mutation = settings_dict["mutation_rate"]
+    pop_size = settings_dict["population_size"]
+    max_era = settings_dict["number_of_eras"]
+    max_gen = settings_dict["number_of_generations_per_era"]
+    
     if len(settings_dict["input_csv_filename"]) == 0:
         student_csv_path = None
     else: 
@@ -2317,14 +2392,10 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         preferred_subgroups_csv_path = None
     else: 
         preferred_subgroups_csv_path = io_directory / settings_dict["preferred_subgroup_csv_filename"]
-        
+
+    # global variables set at the top of page 
     number_of_processes = NUMBER_OF_PROCESSES 
     number_of_tournament_reps_per_island = NUMBER_OF_TOURNAMENT_REPS_PER_ISLAND
-
-    rate_of_mutation = settings_dict["mutation_rate"]
-    pop_size = settings_dict["population_size"]
-    max_era = settings_dict["number_of_eras"]
-    max_gen = settings_dict["number_of_generations_per_era"]
 
     @classmethod
     def run_era(cls, 
