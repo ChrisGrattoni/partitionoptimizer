@@ -37,6 +37,8 @@ import multiprocessing # run the genetic algorithm in parallel on multiple cores
 import os   # used for getting the process ID via os.getpid()
 from pathlib import Path # used for getting directory of SPOTS.py
 import tkinter as tk # used in the GUI
+from tkinter import * # needed to import ttk
+from tkinter import ttk # used for the GUI progress bar
 from tkinter import filedialog # used for the GUI file browser
 from tkinter import font # used to set the width of the "Start" button
 import threading # used to run the GUI and the parallel GA in separate threads
@@ -239,7 +241,16 @@ class PageOne(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         main_label = tk.Label(self, text = "Running Genetic Algorithm", font = ('bold', 18), padx = 10, pady = 10)
-        main_label.grid(row = 0, column = 0)
+        main_label.grid(row = 0, column = 5)
+
+        progress = ttk.Progressbar(self, orient = HORIZONTAL, length = 400,
+                                   mode = 'indeterminate')
+        progress.grid(row = 7, column = 5)
+        progress.start(10)
+        
+        button1 = tk.Button(self, text="Quit now",
+                            command=lambda: [controller.show_frame(StartPage), os._exit(0)])
+        button1.grid(row = 2, column = 5)
 
     
 class Student:
