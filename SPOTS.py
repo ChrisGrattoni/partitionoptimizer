@@ -43,6 +43,7 @@ import threading # used to run the GUI and the parallel GA in separate threads
 import yaml # used to import settings from 'settings.yaml'
 import numpy as np # used to perform mathematical operations for graphs
 import matplotlib.pyplot as plt # used to create graphs of the data
+from matplotlib import colors # used to style graphs/charts
 
 # number of processes to launch (must be >= 4)
 NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
@@ -1442,6 +1443,82 @@ class Schedule:
         # we are trying to minimize and good_score is the number of courses that 
         # are in compliance
         return weighted_fitness_score, penalty_count, good_score, other_score, number_of_courses
+    
+    def get_max_deviation(self):
+        """
+        A method to get the max deviation of each course that is not in compliance
+        from a 25-25-25-25% split (if number_of_partitions = 4) 
+        or a 50-50% split (if number_of_partitions = 2)
+
+        Parameters
+        ----------
+        """
+        max_deviation = [] # max deviation of courses that are not in compliance
+
+        # max deviation for an A/B partition:
+        if self.number_of_partitions == 2:
+            for course in self.course_dict:
+                roster = self.course_dict[course]
+                
+                a_count = 0
+                b_count = 0
+
+                for student in roster:
+                    letter = student.letter
+                    if letter == "A":
+                        a_count += 1
+                    elif letter == "B":
+                        b_count += 1
+                
+                max_count = max(a_count, b_count)
+                total_count = len(roster)
+                hcm = self.half_class_maximum
+
+                if (a_count > hcm or b_count > hcm): # not in compliance
+                    cur_imbalance = (max_count/total_count - 0.5)
+                    max_deviation.append(cur_imbalance)
+        elif self.number_of_partitions == 4:
+            for course in self.course_dict:
+                roster = self.course_dict[course]
+                
+                a_count = 0
+                b_count = 0
+                c_count = 0
+                d_count = 0
+                
+                # count the A's/B's/C's/D's on the roster:
+                for student in roster:
+                    letter = student.letter
+                    if letter == "A":
+                        a_count += 1
+                    elif letter == "B":
+                        b_count += 1
+                    elif letter == "C":
+                        c_count += 1
+                    elif letter == "D":
+                        d_count += 1
+                
+                max_count = max([a_count, b_count, c_count, d_count])
+                total_count = len(roster)
+                qcm = self.quarter_class_maximum
+                hcm = self.half_class_maximum
+        
+                check_individually = (a_count <= qcm 
+                                    and b_count <= qcm 
+                                    and c_count <= qcm 
+                                    and d_count <= qcm)
+            
+                check_pairs = (a_count + b_count <= hcm and c_count + d_count <= hcm)
+                
+                if not (check_individually and check_pairs): # not in compliance
+                    cur_imbalance = (max_count/total_count - 0.25)
+                    max_deviation.append(cur_imbalance)
+                                           
+        else:
+            print("In order to choose something other than an AB or ABCD partition, you must add your own fitness function")    
+            raise NotImplementedError
+    
+        return max_deviation
 
     def verify_student_schedule(self, student_id):
         """
@@ -1547,6 +1624,7 @@ class IndividualPartition(Schedule):
                 
         self.partition = None
         self.fitness = None
+        self.max_deviation = None
 
     def generate_partition(self):
         """
@@ -1606,6 +1684,23 @@ class IndividualPartition(Schedule):
         self.schedule_obj.load_partition(self.partition)        
         self.fitness = self.schedule_obj.fitness_score()
         return self.schedule_obj.fitness_score()
+    
+    def return_max_deviation(self):
+        """
+        A method that loads the current partitions into the Schedule object
+        and returns a list of the maximum deviation of each Course from
+        25-25-25-25% (if number_of_partitions = 4) or 50-50% (if number_of_partitions = 2)
+        of the total class size
+
+        Parameters
+        ----------
+        None
+
+        """
+
+        self.schedule_obj.load_partition(self.partition)        
+        self.max_deviation = self.schedule_obj.get_max_deviation()
+        return self.max_deviation
         
 class Population(IndividualPartition):
     """
@@ -2089,6 +2184,9 @@ class Reports:
     create_pie_chart(cls, era_number, fitness_score, in_compliance, total_courses)
         generates a pie chart visualizing the number of classrooms in/out of compliance
         with social distancing
+    create_histogram(cls, era_number, num_partitions, best_partition_score, max_deviation, time_elapsed, time_limit)
+        generates a histogram of the max deviation from 25/25/25/25% split (if 4 partitions) or
+        50/50% split (if 2 partitions) for each "bad" course that is not in compliance
     """
 
     @classmethod
@@ -2198,7 +2296,7 @@ class Reports:
 
         labels = ["In Compliance", "Out of Compliance"]
         sizes = [in_compliance, total_courses - in_compliance]
-        colors = ['g', 'r']
+        colorslist = ['g', 'r']
 
         # generates a string as the label for each slice
         def pie_label_string(pct):
@@ -2211,11 +2309,69 @@ class Reports:
 
         ax.set_title(title_string + subtitle_string)
         ax.pie(sizes, labels = labels, autopct = pie_label_string,
-                colors = colors, startangle = 90)
+                colors = colorslist, startangle = 90)
         ax.axis('equal')
 
-        pie_file_name = "era" + str(era_number) + ".png"
+        pie_file_name = "pie_era" + str(era_number) + ".png"
         fig.savefig(pie_file_name, bbox_inches='tight')
+
+    @classmethod
+    def create_histogram(cls, era_number, num_partitions, best_partition_score, max_deviation, time_elapsed, time_limit):
+        """
+        Creates an histogram visualizing the max deviation from 25/25/25/25% or 50/50% split of the courses
+        that are not in compliance
+
+        Parameters
+        ----------
+        era_number: int
+            the current era number
+        
+        num_partitions: int
+            number of partitions (2 or 4)
+
+        best_partition_score: tuple
+            fitness score and other data (i.e. number in compliance, etc)
+            of best partition found
+        
+        max_deviation: list
+            list of the maximum deviation of each bad course
+        
+        time_elapsed: int
+            the time the program has run for so far
+        
+        time_limit: int
+            the total time limit allotted for the program to run
+        """
+
+        n_bins = 10
+        total_courses = best_partition_score[-1]
+        in_compliance = best_partition_score[2]
+        not_in_compliance = total_courses - in_compliance
+
+        x = max_deviation
+
+        fig = plt.figure(linewidth = 2)
+        ax = fig.add_subplot(111)
+
+        n, bins, patches = ax.hist(x, bins=n_bins, edgecolor = 'black')
+        ax.set_title("Era " + str(era_number) + ": Max Deviation of the " + str(not_in_compliance) + " Courses Not in Compliance")
+        if (num_partitions == 4):
+            ax.set_xlabel("Max Deviation Per Course from 25%/25%/25%/25% Of Class Size")
+        elif (num_partitions == 2):
+            ax.set_xlabel("Max Deviation Per Coursefrom 50%/50% Of Class Size")
+        ax.set_ylabel("Number of Courses")
+
+        for thispatch in patches:
+            if (time_elapsed/time_limit < 0.5): # early; red plot
+                thispatch.set_facecolor("#ff5757")
+            elif (time_elapsed/time_limit < 0.8): # middle; yellow plot
+                thispatch.set_facecolor("#ffe485")
+            else: # late; green plot
+                thispatch.set_facecolor("#b0ff85")
+
+        #ax.xaxis.set_ticks(np.arange(0, 1, 0.1))
+        hist_file_name = "hist_era" + str(era_number) + ".png"
+        fig.savefig(hist_file_name, bbox_inches='tight')
     
     @classmethod
     def yaml_writer(cls, settings_dict):
@@ -2963,6 +3119,11 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
 
             # create a pie chart
             Reports.create_pie_chart(era_number, champion_fitness_score, champion_in_compliance, total_courses)
+
+            # create a histogram
+            max_deviation = load_schedule.get_max_deviation()
+            time_limit_seconds = 60 * cls.time_limit
+            Reports.create_histogram(era_number, cls.number_of_partitions, champion_partition_score, max_deviation, total_time, time_limit_seconds)
 
             progress = Reports.return_era_progress(era_number, start_timer, end_timer, total_time)
             print(progress)
