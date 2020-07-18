@@ -1,0 +1,24 @@
+Progress Log
+PID(13344):Generation = 1, Fitness = 51.857441388489555, In Compliance = 393 out of 602, elapsed time so far this era (sec) = 3.9908994
+PID(1172):Generation = 1, Fitness = 52.51867640196512, In Compliance = 394 out of 602, elapsed time so far this era (sec) = 3.9759368999999998
+PID(3628):Generation = 1, Fitness = 55.653208762202375, In Compliance = 405 out of 602, elapsed time so far this era (sec) = 3.9599400000000005
+PID(7160):Generation = 1, Fitness = 51.88099659386553, In Compliance = 392 out of 602, elapsed time so far this era (sec) = 4.010179
+PID(8316):Generation = 1, Fitness = 55.61587140207133, In Compliance = 405 out of 602, elapsed time so far this era (sec) = 4.0735373
+PID(2064):Generation = 1, Fitness = 53.4466173449956, In Compliance = 397 out of 602, elapsed time so far this era (sec) = 4.1068831
+PID(14724):Generation = 1, Fitness = 54.062964565815044, In Compliance = 399 out of 602, elapsed time so far this era (sec) = 4.1082888
+PID(13584):Generation = 1, Fitness = 52.44932068225962, In Compliance = 393 out of 602, elapsed time so far this era (sec) = 4.1043402
+PID(13344):Generation = 2, Fitness = 52.73727753622932, In Compliance = 396 out of 602, elapsed time so far this era (sec) = 5.5198773999999995
+PID(1172):Generation = 2, Fitness = 53.48671220464137, In Compliance = 398 out of 602, elapsed time so far this era (sec) = 5.500055799999999
+PID(3628):Generation = 2, Fitness = 56.07596493581773, In Compliance = 407 out of 602, elapsed time so far this era (sec) = 5.4722312
+PID(7160):Generation = 2, Fitness = 52.99611404592311, In Compliance = 397 out of 602, elapsed time so far this era (sec) = 5.5377041
+PID(2064):Generation = 2, Fitness = 54.29438432150279, In Compliance = 397 out of 602, elapsed time so far this era (sec) = 5.6138212
+PID(8316):Generation = 2, Fitness = 56.95039273361951, In Compliance = 411 out of 602, elapsed time so far this era (sec) = 5.6168303
+PID(14724):Generation = 2, Fitness = 54.29857432904214, In Compliance = 399 out of 602, elapsed time so far this era (sec) = 5.6685145
+PID(13584):Generation = 2, Fitness = 53.299344297951635, In Compliance = 397 out of 602, elapsed time so far this era (sec) = 5.672085600000001
+PID(13344):Generation = 3, Fitness = 53.304052120119, In Compliance = 397 out of 602, elapsed time so far this era (sec) = 7.0116697
+PID(3628):Generation = 3, Fitness = 57.18087036363864, In Compliance = 411 out of 602, elapsed time so far this era (sec) = 6.9306359
+PID(1172):Generation = 3, Fitness = 53.59715755258812, In Compliance = 400 out of 602, elapsed time so far this era (sec) = 6.998501399999999
+PID(7160):Generation = 3, Fitness = 53.963061643278444, In Compliance = 400 out of 602, elapsed time so far this era (sec) = 7.2243261
+PID(2064):Generation = 3, Fitness = 56.994827621621845, In Compliance = 410 out of 602, elapsed time so far this era (sec) = 7.3197749000000005
+PID(14724):Generation = 3, Fitness = 55.72000812338833, In Compliance = 405 out of 602, elapsed time so far this era (sec) = 7.292085
+PID(13584):Generation = 3, Fitness = 53.71445656576864, In Compliance = 398 out of 602, elapsed time so far this era (sec) = 7.360307700000001

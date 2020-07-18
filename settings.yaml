@@ -14,11 +14,11 @@ time_limit : 480
  
 # Filename of .csv file with student schedule data (default = 'example_student_data.csv') 
 # Note: does not need to be an absolute path as long as the .csv and .py are in the same folder 
-input_csv_filename : 'example_student_data.csv'
+input_csv_filename : C:/Users/cgrattoni/Documents/GitHub/partitionoptimizer/example_student_data.csv
  
 # Filename of .csv file with required student subgrouping data (default = 'example_subgroups.csv') 
 # if no required subgroups are needed, set the value below to an empty string, REQUIRED_SUBGROUP_CSV_FILENAME = '' 
-required_subgroup_csv_filename : 'example_subgroups.csv'
+required_subgroup_csv_filename : C:/Users/cgrattoni/Documents/GitHub/partitionoptimizer/example_subgroups.csv
  
 # Filename of .csv file with preferred student subgrouping data (default = None) 
 # if no required subgroups are needed, set the value below to an empty string, PREFERRED_SUBGROUP_CSV_FILENAME = '' 

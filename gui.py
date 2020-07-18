@@ -2922,6 +2922,10 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
 
 
 if __name__ == "__main__":
+    # needed when packaging as an executable: 
+    # source: https://stackoverflow.com/questions/33970690/why-python-executable-opens-new-window-instance-when-function-by-multiprocessing
+    multiprocessing.freeze_support() 
+    
     if USE_GUI:
         root = Window()
         root.mainloop()
