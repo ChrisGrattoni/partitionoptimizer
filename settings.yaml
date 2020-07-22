@@ -48,7 +48,7 @@ number_of_eras : 5000
 # with 16 cores, good results are obtained with a default value of 20 
 # but with fewer cores, you may want to increase this value 
 # recommended range: 10 - 50 (default = 20) 
-number_of_generations_per_era : 20
+number_of_generations_per_era : 6
  
 # GUI SETTINGS 
  

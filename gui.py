@@ -42,6 +42,12 @@ from tkinter import font # used to set the width of the "Start" button
 import threading # used to run the GUI and the parallel GA in separate threads
 import yaml # used to import settings from 'settings.yaml'
 
+# TESTING PIE
+import matplotlib
+import matplotlib.pyplot as plt
+from PIL import Image, ImageTk
+from datetime import datetime #just used to test that the pie chart is updating
+
 # number of processes to launch (must be >= 4)
 NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
 
@@ -82,6 +88,9 @@ class Window(tk.Tk):
         # a dictionary of frames
         self.frames = {}
 
+        # TESTING PIE
+        self.current_frame = StartPage
+
         for F in (StartPage, PageOne):
 
             frame = F(self, self)
@@ -90,13 +99,26 @@ class Window(tk.Tk):
 
             frame.grid(row=0, column=0, sticky="nsew")
 
-        self.show_frame(StartPage)
+        self.show_frame(self.current_frame) # TESTING PIE, CHANGED THIS FRAOM StartPage
 
     # display frames
     def show_frame(self, cont):
 
         frame = self.frames[cont]
         frame.tkraise()
+
+    # TEST PIE
+    def update(self):
+        if self.current_frame is PageOne:
+            frame = PageOne(self, self)
+
+            self.frames[PageOne] = frame
+
+            frame.grid(row=0, column=0, sticky="nsew")
+            
+            self.show_frame(self.current_frame) 
+        
+        self.after(1000, self.update)
 
 # the default landing page of the GUI        
 class StartPage(tk.Frame):
@@ -144,7 +166,11 @@ class StartPage(tk.Frame):
     # launch the genetic algorithm
     def launch(self, controller):
         # switch to the page that displays while the algorithm is running
-        controller.show_frame(PageOne)
+        
+        # TESTING PIE
+        controller.current_frame = PageOne
+        
+        controller.show_frame(controller.current_frame) # TESTING PIE, CHANGED FROM PageOne
         
         # update class attributes of the ParallelGeneticAlgorithm
         # from the GUI using the 'settings.yaml' file
@@ -237,6 +263,15 @@ class PageOne(tk.Frame):
         tk.Frame.__init__(self, parent)
         main_label = tk.Label(self, text = "Running Genetic Algorithm", font = ('bold', 18), padx = 10, pady = 10)
         main_label.grid(row = 0, column = 0)
+        
+        # TESTING PIE
+        # source: https://pythonbasics.org/tkinter-image/
+        load = Image.open(IO_DIRECTORY / "current_pie.png")
+        render = ImageTk.PhotoImage(load)
+        img = tk.Label(self, image=render)
+        img.image = render
+        img.grid(row = 1, column = 0)
+        
 
     
 class Student:
@@ -891,6 +926,25 @@ class Schedule:
             # assign the same letter to every student in the subgroup
             for student in student_subgroup:
                 student.letter = letter
+
+    # TESTING PIE
+    def write_pie(self, score_tuple):
+        # the file name and location for the student assignment report:
+        output_file = IO_DIRECTORY / 'current_pie.png' 
+
+        # Pie chart, where the slices will be ordered and plotted counter-clockwise:
+        labels = ['Good', 'Bad']
+        sizes = [score_tuple[2], score_tuple[-1]]
+
+        plt.pie(sizes, labels=labels)
+        
+        now = datetime.now()
+
+        current_time = now.strftime("%H:%M:%S")
+        plt.title(current_time)
+        
+        plt.savefig(output_file)
+        plt.close()
 
     # possibly move to Reports class
     def write_student_assignments(self):
@@ -2887,9 +2941,15 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             # before we start crossbreeding, we first log the current chamption partition out of all the islands
             island_populations.sort(reverse = True)
             champion_partition = island_populations[0][0][1]
+            
             load_schedule.load_partition(champion_partition)
             load_schedule.write_student_assignments()
             load_schedule.write_course_analysis()
+
+            # TESTING PIE 
+            champion_score = island_populations[0][0][0]
+            print(champion_score)
+            load_schedule.write_pie(champion_score)
 
             # uncomment the below line to output info about the champion partition
             # print("CURRENT HIGH FITNESS SCORE: " + str(island_populations[0][0]))
@@ -2928,6 +2988,9 @@ if __name__ == "__main__":
     
     if USE_GUI:
         root = Window()
+        
+        # TESTING PIE
+        root.after(1000, root.update)
         root.mainloop()
     else:
         ParallelGeneticAlgorithm.run_parallel()
