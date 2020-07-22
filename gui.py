@@ -72,6 +72,8 @@ USE_GUI = settings_dict["use_gui"]
 # default width of the GUI window from 'settings.yaml'
 WINDOW_WIDTH = settings_dict["window_width"]
 
+PIC_SIZE = 300
+
 # our tkinter Window class
 class Window(tk.Tk):
 
@@ -109,6 +111,9 @@ class Window(tk.Tk):
 
         frame = self.frames[cont]
         frame.tkraise()
+        
+    def get_frame(self, cont):
+        return self.frames[cont]
 
     # TEST PIE
     def update(self):
@@ -174,6 +179,8 @@ class StartPage(tk.Frame):
         controller.current_frame = PageOne
         
         controller.show_frame(controller.current_frame) # TESTING PIE, CHANGED FROM PageOne
+
+        PageOne_frame = controller.get_frame(controller.current_frame)
         
         # update class attributes of the ParallelGeneticAlgorithm
         # from the GUI using the 'settings.yaml' file
@@ -215,12 +222,9 @@ class StartPage(tk.Frame):
         
         # call the yaml_writer method to write changes to 'settings.yaml'
         Reports.yaml_writer(settings_dict)
-        
-        # launch genetic algorithm using these settings, but do 
-        # so in a separate thread to keep the GUI window responsive 
-        new_thread = threading.Thread(target = ParallelGeneticAlgorithm.run_parallel)
-        new_thread.start()
 
+        PageOne_frame.create_queue()
+        
     # helper method to place text input with a label, starting value & row placement
     def text_input(self, label_text, default_value, starting_row):
         text = tk.StringVar(self)
@@ -262,35 +266,81 @@ class StartPage(tk.Frame):
 # completes its run
 class PageOne(tk.Frame):
     # this is a placeholder for now
+    traits = (0,0,0)
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         main_label = tk.Label(self, text = "Running Genetic Algorithm", font = ('bold', 18), padx = 10, pady = 10)
         main_label.grid(row = 0, column = 0)
         
+##        progress = ttk.Progressbar(self, orient = HORIZONTAL, length = 400,
+##                                   mode = 'indeterminate')
+##        progress.grid(row = 7, column = 5)
+##        progress.start(10)
+        
+        button1 = tk.Button(self, text="Quit now",
+                            command=lambda: [controller.show_frame(StartPage), os._exit(0)])
+        button1.grid(row = 2, column = 1, pady = 20, padx = 20)
+        self.status_update(PageOne.traits)
+        
         # TESTING PIE
         # source: https://pythonbasics.org/tkinter-image/
         try:
             pieload = Image.open(IO_DIRECTORY / "current_pie.png")
+            pieload = pieload.resize((round(1.3*PIC_SIZE), PIC_SIZE), Image.ANTIALIAS)
             pierender = ImageTk.PhotoImage(pieload)
             pieimg = tk.Label(self, image=pierender)
             pieimg.image = pierender
-            pieimg.grid(row = 1, column = 0)
+            pieimg.grid(row = 1, column = 0, padx = 50, pady = 20)
 
             histload = Image.open(IO_DIRECTORY / "current_hist.png")
+            histload = histload.resize((round(1.5*PIC_SIZE), PIC_SIZE), Image.ANTIALIAS)
             histrender = ImageTk.PhotoImage(histload)
             histimg = tk.Label(self, image=histrender)
             histimg.image = histrender
-            histimg.grid(row = 1, column = 1)
+            histimg.grid(row = 1, column = 1, padx = 50, pady = 20)
         except FileNotFoundError:
             pass
+           
+    def create_queue(self):
+        # sends thread to run_parallel()
+        
+        message_queue = queue.Queue()
 
-# IM PUTTING IT HERE
+        new_thread = threading.Thread(target = ParallelGeneticAlgorithm.run_parallel, args = (message_queue,))
+        new_thread.start()
 
+        self.start_message_queue(message_queue)
+        PageOne.traits = (0, 0, ParallelGeneticAlgorithm.time_limit*60)
+        
+    def start_message_queue(self, message_queue):
+        # starts updating the tuple
+        self.after(500, self.check_message_queue, message_queue)
 
+    
+    def check_message_queue(self, message_queue):
+        # starts saving values to the tuple
+        try:
+            (era_number, number_of_partitions, champion_partition_score, max_deviation, total_time, time_limit) = message_queue.get_nowait()
+            PageOne.traits = (era_number, total_time, time_limit)
+        except queue.Empty:
+            pass
+        finally:
+            self.after(1000, self.check_message_queue, message_queue)
+    
+    
+    def status_update(self, traits):
+        # displays updated report to the GUI
+        try:
+            era_label = tk.Label(self, text = "Running Era #" + str(PageOne.traits[0] + 1) + "...", font = ('bold', 10))
+            era_label.grid(row = 10, column = 0, padx = 10)
+            time_elapsed_label = tk.Label(self, text = "Time elapsed (updated by era): " + str(round(PageOne.traits[1]/60,2)) + " minutes", font = ('bold', 10))
+            time_elapsed_label.grid(row = 10, column = 1, padx = 30)
+            time_remaining_label = tk.Label(self, text = "Time remaining (updated by era): " + str(round(PageOne.traits[2]/60-PageOne.traits[1]/60,2)) + " minutes", font = ('bold', 10))
+            time_remaining_label.grid(row = 10, column = 2, padx=30)
+        except IndexError:
+            pass
 
-
-
-#----------------------------------------------------------------------------------------------
+        
 class Student:
     """
     A class used to store attributes about individual students, 
@@ -2356,7 +2406,7 @@ class Reports:
         ax = fig.add_subplot(111)
 
         title_string = "Era " + str(era_number) + ": Classrooms In/Out of Compliance with Social Distancing\n"
-        subtitle_string = "Fitness Score: " + str(fitness_score)
+        subtitle_string = "Fitness Score: " + str(round(fitness_score,3))
 
         ax.set_title(title_string + subtitle_string)
         ax.pie(sizes, labels = labels, autopct = pie_label_string,
@@ -3014,7 +3064,7 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
         return crossed_populations
 
     @classmethod
-    def run_parallel(cls):
+    def run_parallel(cls, message_queue = None):
         """
         In order to take advantage of multiple cores, main() works as follows:
             1. Launch NUMBER_OF_PROCESSES processes, each of which runs an instance of the self.run_era() function.
@@ -3173,7 +3223,11 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             max_deviation = load_schedule.get_max_deviation()
             time_limit_seconds = 60 * cls.time_limit
 
-            # create pie chart
+            if (USE_GUI):
+                queue_tuple = (era_number, cls.number_of_partitions, champion_partition_score, max_deviation, total_time, time_limit_seconds)
+                message_queue.put(queue_tuple)
+                
+            # create a pie chart
             Reports.create_pie_chart(era_number, champion_fitness_score, champion_in_compliance, total_courses)
 
             # create a histogram
