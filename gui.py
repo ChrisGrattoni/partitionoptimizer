@@ -23,7 +23,6 @@ Requires-Python: >= 3.8 (Feature from version 3.7+: dictionary order is guarante
 Project-URL: https://github.com/NFLtheorem/partitionoptimizer 
 """
 
-# import statements: 
 import random # used in the set_letter method of the Student class
 import csv # used in students_from_csv method of IndividualPartition class
 import time # use when benchmarking and setting an evaluation time limit:
@@ -37,14 +36,18 @@ import multiprocessing # run the genetic algorithm in parallel on multiple cores
 import os   # used for getting the process ID via os.getpid()
 from pathlib import Path # used for getting directory of SPOTS.py
 import tkinter as tk # used in the GUI
+from tkinter import * # needed to import ttk
+from tkinter import ttk # used for the GUI progress bar
 from tkinter import filedialog # used for the GUI file browser
 from tkinter import font # used to set the width of the "Start" button
-import threading # used to run the GUI and the parallel GA in separate threads
+import threading, queue # used to run the GUI and the parallel GA in separate threads
 import yaml # used to import settings from 'settings.yaml'
+import numpy as np # used to perform mathematical operations for graphs
+import matplotlib.pyplot as plt # used to create graphs of the data
+from matplotlib import colors # used to style graphs/charts
 
 # TESTING PIE
 import matplotlib
-import matplotlib.pyplot as plt
 from PIL import Image, ImageTk
 from datetime import datetime #just used to test that the pie chart is updating
 
@@ -266,14 +269,28 @@ class PageOne(tk.Frame):
         
         # TESTING PIE
         # source: https://pythonbasics.org/tkinter-image/
-        load = Image.open(IO_DIRECTORY / "current_pie.png")
-        render = ImageTk.PhotoImage(load)
-        img = tk.Label(self, image=render)
-        img.image = render
-        img.grid(row = 1, column = 0)
-        
+        try:
+            pieload = Image.open(IO_DIRECTORY / "current_pie.png")
+            pierender = ImageTk.PhotoImage(pieload)
+            pieimg = tk.Label(self, image=pierender)
+            pieimg.image = pierender
+            pieimg.grid(row = 1, column = 0)
 
-    
+            histload = Image.open(IO_DIRECTORY / "current_hist.png")
+            histrender = ImageTk.PhotoImage(histload)
+            histimg = tk.Label(self, image=histrender)
+            histimg.image = histrender
+            histimg.grid(row = 1, column = 1)
+        except FileNotFoundError:
+            pass
+
+# IM PUTTING IT HERE
+
+
+
+
+
+#----------------------------------------------------------------------------------------------
 class Student:
     """
     A class used to store attributes about individual students, 
@@ -927,25 +944,6 @@ class Schedule:
             for student in student_subgroup:
                 student.letter = letter
 
-    # TESTING PIE
-    def write_pie(self, score_tuple):
-        # the file name and location for the student assignment report:
-        output_file = IO_DIRECTORY / 'current_pie.png' 
-
-        # Pie chart, where the slices will be ordered and plotted counter-clockwise:
-        labels = ['Good', 'Bad']
-        sizes = [score_tuple[2], score_tuple[-1]]
-
-        plt.pie(sizes, labels=labels)
-        
-        now = datetime.now()
-
-        current_time = now.strftime("%H:%M:%S")
-        plt.title(current_time)
-        
-        plt.savefig(output_file)
-        plt.close()
-
     # possibly move to Reports class
     def write_student_assignments(self):
         """
@@ -1494,6 +1492,82 @@ class Schedule:
         # we are trying to minimize and good_score is the number of courses that 
         # are in compliance
         return weighted_fitness_score, penalty_count, good_score, other_score, number_of_courses
+    
+    def get_max_deviation(self):
+        """
+        A method to get the max deviation of each course that is not in compliance
+        from a 25-25-25-25% split (if number_of_partitions = 4) 
+        or a 50-50% split (if number_of_partitions = 2)
+
+        Parameters
+        ----------
+        """
+        max_deviation = [] # max deviation of courses that are not in compliance
+
+        # max deviation for an A/B partition:
+        if self.number_of_partitions == 2:
+            for course in self.course_dict:
+                roster = self.course_dict[course]
+                
+                a_count = 0
+                b_count = 0
+
+                for student in roster:
+                    letter = student.letter
+                    if letter == "A":
+                        a_count += 1
+                    elif letter == "B":
+                        b_count += 1
+                
+                max_count = max(a_count, b_count)
+                total_count = len(roster)
+                hcm = self.half_class_maximum
+
+                if (a_count > hcm or b_count > hcm): # not in compliance
+                    cur_imbalance = (max_count/total_count - 0.5)
+                    max_deviation.append(cur_imbalance)
+        elif self.number_of_partitions == 4:
+            for course in self.course_dict:
+                roster = self.course_dict[course]
+                
+                a_count = 0
+                b_count = 0
+                c_count = 0
+                d_count = 0
+                
+                # count the A's/B's/C's/D's on the roster:
+                for student in roster:
+                    letter = student.letter
+                    if letter == "A":
+                        a_count += 1
+                    elif letter == "B":
+                        b_count += 1
+                    elif letter == "C":
+                        c_count += 1
+                    elif letter == "D":
+                        d_count += 1
+                
+                max_count = max([a_count, b_count, c_count, d_count])
+                total_count = len(roster)
+                qcm = self.quarter_class_maximum
+                hcm = self.half_class_maximum
+        
+                check_individually = (a_count <= qcm 
+                                    and b_count <= qcm 
+                                    and c_count <= qcm 
+                                    and d_count <= qcm)
+            
+                check_pairs = (a_count + b_count <= hcm and c_count + d_count <= hcm)
+                
+                if not (check_individually and check_pairs): # not in compliance
+                    cur_imbalance = (max_count/total_count - 0.25)
+                    max_deviation.append(cur_imbalance)
+                                           
+        else:
+            print("In order to choose something other than an AB or ABCD partition, you must add your own fitness function")    
+            raise NotImplementedError
+    
+        return max_deviation
 
     def verify_student_schedule(self, student_id):
         """
@@ -1515,7 +1589,7 @@ class Schedule:
         for student in self.student_list:
             if student.id == student_id:
                 student_letter_name = "Group: " + student.letter + ", Name: " + student.last_name + ", " + student.first_name
-                current_classes = tuple[1]
+                current_classes = student.schedule
         
         return [student_letter_name, [(course.room_number, course.period) for course in current_classes]]
     
@@ -1599,6 +1673,7 @@ class IndividualPartition(Schedule):
                 
         self.partition = None
         self.fitness = None
+        self.max_deviation = None
 
     def generate_partition(self):
         """
@@ -1658,6 +1733,23 @@ class IndividualPartition(Schedule):
         self.schedule_obj.load_partition(self.partition)        
         self.fitness = self.schedule_obj.fitness_score()
         return self.schedule_obj.fitness_score()
+    
+    def return_max_deviation(self):
+        """
+        A method that loads the current partitions into the Schedule object
+        and returns a list of the maximum deviation of each Course from
+        25-25-25-25% (if number_of_partitions = 4) or 50-50% (if number_of_partitions = 2)
+        of the total class size
+
+        Parameters
+        ----------
+        None
+
+        """
+
+        self.schedule_obj.load_partition(self.partition)        
+        self.max_deviation = self.schedule_obj.get_max_deviation()
+        return self.max_deviation
         
 class Population(IndividualPartition):
     """
@@ -2138,6 +2230,12 @@ class Reports:
         write a progress_string to the output log
     return_era_progress(cls, era_number, start_timer, end_timer, total_time)
         concatenate a string with parallel genetic algorithm progress
+    create_pie_chart(cls, era_number, fitness_score, in_compliance, total_courses)
+        generates a pie chart visualizing the number of classrooms in/out of compliance
+        with social distancing
+    create_histogram(cls, era_number, num_partitions, best_partition_score, max_deviation, time_elapsed, time_limit)
+        generates a histogram of the max deviation from 25/25/25/25% split (if 4 partitions) or
+        50/50% split (if 2 partitions) for each "bad" course that is not in compliance
     """
 
     @classmethod
@@ -2225,6 +2323,108 @@ class Reports:
         progress_string += "Total elapsed time: " + str(round(total_time/60, 2)) + " min"
         
         return progress_string
+
+    @classmethod
+    def create_pie_chart(cls, era_number, fitness_score, in_compliance, total_courses):
+        """
+        Creates a pie chart visualizing the portion of classrooms in compliance (green) vs. out of compliance (red)
+        Parameters
+        ----------
+        era_number: int
+            the current era number
+        
+        fitness_score: int
+            fitness score of best partition
+
+        in_compliance: int
+            the number of classrooms that satisfy social distancing guidelines as defined
+        
+        total_courses: int
+            the total number of classrooms present
+        """
+
+        labels = ["In Compliance", "Out of Compliance"]
+        sizes = [in_compliance, total_courses - in_compliance]
+        colorslist = ['g', 'r']
+
+        # generates a string as the label for each slice
+        def pie_label_string(pct):
+            num = int(np.round(pct/100 * sum(sizes)))
+            return str(np.round(pct)) + "% \n" + "(" + str(num) + " out of " + str(total_courses) + ")"
+
+        fig = plt.figure(linewidth = 2)
+        ax = fig.add_subplot(111)
+
+        title_string = "Era " + str(era_number) + ": Classrooms In/Out of Compliance with Social Distancing\n"
+        subtitle_string = "Fitness Score: " + str(fitness_score)
+
+        ax.set_title(title_string + subtitle_string)
+        ax.pie(sizes, labels = labels, autopct = pie_label_string,
+                colors = colorslist, startangle = 90)
+        ax.axis('equal')
+
+        #pie_file_name = "pie_era" + str(era_number) + ".png"
+        pie_output_file = IO_DIRECTORY / 'current_pie.png'
+        fig.savefig(pie_output_file, bbox_inches='tight')
+
+    @classmethod
+    def create_histogram(cls, era_number, num_partitions, best_partition_score, max_deviation, time_elapsed, time_limit):
+        """
+        Creates an histogram visualizing the max deviation from 25/25/25/25% or 50/50% split of the courses
+        that are not in compliance
+
+        Parameters
+        ----------
+        era_number: int
+            the current era number
+        
+        num_partitions: int
+            number of partitions (2 or 4)
+
+        best_partition_score: tuple
+            fitness score and other data (i.e. number in compliance, etc)
+            of best partition found
+        
+        max_deviation: list
+            list of the maximum deviation of each bad course
+        
+        time_elapsed: int
+            the time the program has run for so far
+        
+        time_limit: int
+            the total time limit allotted for the program to run
+        """
+
+        n_bins = 10
+        total_courses = best_partition_score[-1]
+        in_compliance = best_partition_score[2]
+        not_in_compliance = total_courses - in_compliance
+
+        x = max_deviation
+
+        fig = plt.figure(linewidth = 2)
+        ax = fig.add_subplot(111)
+
+        n, bins, patches = ax.hist(x, bins=n_bins, edgecolor = 'black')
+        ax.set_title("Era " + str(era_number) + ": Max Deviation of the " + str(not_in_compliance) + " Courses Not in Compliance")
+        if (num_partitions == 4):
+            ax.set_xlabel("Max Deviation Per Course from 25%/25%/25%/25% Of Class Size")
+        elif (num_partitions == 2):
+            ax.set_xlabel("Max Deviation Per Coursefrom 50%/50% Of Class Size")
+        ax.set_ylabel("Number of Courses")
+
+        for thispatch in patches:
+            if (time_elapsed/time_limit < 0.5): # early; red plot
+                thispatch.set_facecolor("#ff5757")
+            elif (time_elapsed/time_limit < 0.8): # middle; yellow plot
+                thispatch.set_facecolor("#ffe485")
+            else: # late; green plot
+                thispatch.set_facecolor("#b0ff85")
+
+        #ax.xaxis.set_ticks(np.arange(0, 1, 0.1))
+        #hist_file_name = "hist_era" + str(era_number) + ".png"
+        hist_output_file = IO_DIRECTORY / 'current_hist.png'
+        fig.savefig(hist_output_file, bbox_inches='tight')
     
     @classmethod
     def yaml_writer(cls, settings_dict):
@@ -2941,19 +3141,18 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             # before we start crossbreeding, we first log the current chamption partition out of all the islands
             island_populations.sort(reverse = True)
             champion_partition = island_populations[0][0][1]
-            
             load_schedule.load_partition(champion_partition)
             load_schedule.write_student_assignments()
             load_schedule.write_course_analysis()
 
-            # TESTING PIE 
-            champion_score = island_populations[0][0][0]
-            print(champion_score)
-            load_schedule.write_pie(champion_score)
+            # fetch info for creating a pie chart for the champion partition this era
+            champion_partition_score = island_populations[0][0][0]
+            champion_fitness_score = champion_partition_score[0]
+            champion_in_compliance = champion_partition_score[2]
+            total_courses = champion_partition_score[-1]
 
             # uncomment the below line to output info about the champion partition
             # print("CURRENT HIGH FITNESS SCORE: " + str(island_populations[0][0]))
-
 
             # now that we've saved all info about the current champion, we can crossbreed
             crossed_populations = cls.crossbreed_islands(island_populations, cls.number_of_processes, cls.number_of_tournament_reps_per_island)
@@ -2971,6 +3170,15 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             # we've completed one more era, log progress and we're done
             era_number += 1
 
+            max_deviation = load_schedule.get_max_deviation()
+            time_limit_seconds = 60 * cls.time_limit
+
+            # create pie chart
+            Reports.create_pie_chart(era_number, champion_fitness_score, champion_in_compliance, total_courses)
+
+            # create a histogram
+            Reports.create_histogram(era_number, cls.number_of_partitions, champion_partition_score, max_deviation, total_time, time_limit_seconds)
+
             progress = Reports.return_era_progress(era_number, start_timer, end_timer, total_time)
             print(progress)
             Reports.write_progress(cls.io_directory, progress, 'a')
@@ -2982,10 +3190,6 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
 
 
 if __name__ == "__main__":
-    # needed when packaging as an executable: 
-    # source: https://stackoverflow.com/questions/33970690/why-python-executable-opens-new-window-instance-when-function-by-multiprocessing
-    multiprocessing.freeze_support() 
-    
     if USE_GUI:
         root = Window()
         
