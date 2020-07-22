@@ -224,6 +224,8 @@ class StartPage(tk.Frame):
         Reports.yaml_writer(settings_dict)
 
         PageOne_frame.create_queue()
+
+##        PageOne_frame.progress_bar()
         
     # helper method to place text input with a label, starting value & row placement
     def text_input(self, label_text, default_value, starting_row):
@@ -310,7 +312,7 @@ class PageOne(tk.Frame):
         new_thread.start()
 
         self.start_message_queue(message_queue)
-        PageOne.traits = (0, 0, ParallelGeneticAlgorithm.time_limit*60)
+        PageOne.traits = (0, 0, settings_dict["time_limit"]*60)
         
     def start_message_queue(self, message_queue):
         # starts updating the tuple
@@ -339,8 +341,18 @@ class PageOne(tk.Frame):
             time_remaining_label.grid(row = 10, column = 2, padx=30)
         except IndexError:
             pass
-
-        
+##
+##    def progress_bar(self):
+##        self.popup = tk.Toplevel()
+##        self.popup.wm_title("Progress Bar")
+##        self.progress = ttk.Progressbar(popup, orient = HORIZONTAL,
+##                                length = 400, mode = 'indeterminate')
+##        self.progress.grid(row = 1, column = 0)
+##        self.progress.start(10)
+##        self.B1 = ttk.Button(popup, text="Exit", command = popup.destroy)
+##        self.B1.grid(row =2, column = 0)
+##        self.popup.mainloop()
+##        
 class Student:
     """
     A class used to store attributes about individual students, 
