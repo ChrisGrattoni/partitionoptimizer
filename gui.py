@@ -2423,10 +2423,13 @@ class Reports:
                 colors = colorslist, startangle = 90)
         ax.axis('equal')
 
-        #pie_file_name = "pie_era" + str(era_number) + ".png"
-        pie_output_file = IO_DIRECTORY / 'current_pie.png'
-        fig.savefig(pie_output_file, bbox_inches='tight')
-
+        if (USE_GUI):
+            pie_output_file = IO_DIRECTORY / 'current_pie.png'
+            fig.savefig(pie_output_file, bbox_inches='tight')
+        else:
+            pie_output_file = "pie_era" + str(era_number) + ".png"
+            fig.savefig(pie_output_file, bbox_inches='tight')
+        
     @classmethod
     def create_histogram(cls, era_number, num_partitions, best_partition_score, max_deviation, time_elapsed, time_limit):
         """
@@ -2481,10 +2484,12 @@ class Reports:
             else: # late; green plot
                 thispatch.set_facecolor("#b0ff85")
 
-        #ax.xaxis.set_ticks(np.arange(0, 1, 0.1))
-        #hist_file_name = "hist_era" + str(era_number) + ".png"
-        hist_output_file = IO_DIRECTORY / 'current_hist.png'
-        fig.savefig(hist_output_file, bbox_inches='tight')
+        if (USE_GUI):
+            hist_output_file = IO_DIRECTORY / 'current_hist.png'
+            fig.savefig(hist_output_file, bbox_inches='tight')
+        else:
+            hist_output_file = "hist_era" + str(era_number) + ".png"
+            fig.savefig(hist_output_file, bbox_inches='tight')
     
     @classmethod
     def yaml_writer(cls, settings_dict):
