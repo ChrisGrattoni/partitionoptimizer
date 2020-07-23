@@ -72,7 +72,7 @@ USE_GUI = settings_dict["use_gui"]
 # default width of the GUI window from 'settings.yaml'
 WINDOW_WIDTH = settings_dict["window_width"]
 
-PIC_SIZE = 300
+PIC_SIZE = 350
 
 # our tkinter Window class
 class Window(tk.Tk):
@@ -89,7 +89,7 @@ class Window(tk.Tk):
         
         # the dimensions of the window (default 600 px by 400 px)
         self.geometry(str(WINDOW_WIDTH) + 'x400') 
-        
+
         # a dictionary of frames
         self.frames = {}
 
@@ -177,6 +177,9 @@ class StartPage(tk.Frame):
         
         # TESTING PIE
         controller.current_frame = PageOne
+
+        # make window larger
+        controller.geometry("1050x550")
         
         controller.show_frame(controller.current_frame) # TESTING PIE, CHANGED FROM PageOne
 
@@ -271,17 +274,11 @@ class PageOne(tk.Frame):
     traits = (0,0,0)
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
-        main_label = tk.Label(self, text = "Running Genetic Algorithm", font = ('bold', 18), padx = 10, pady = 10)
-        main_label.grid(row = 0, column = 0)
         
-##        progress = ttk.Progressbar(self, orient = HORIZONTAL, length = 400,
-##                                   mode = 'indeterminate')
-##        progress.grid(row = 7, column = 5)
-##        progress.start(10)
-        
-        button1 = tk.Button(self, text="Quit now",
+        button1 = tk.Button(self, text="Force Quit now",
                             command=lambda: [controller.show_frame(StartPage), os._exit(0)])
-        button1.grid(row = 2, column = 1, pady = 20, padx = 20)
+        button1.grid(row = 3, column = 0, padx = 10, columnspan = 2, sticky="NSEW")
+
         self.status_update(PageOne.traits)
         
         # TESTING PIE
@@ -292,19 +289,21 @@ class PageOne(tk.Frame):
             pierender = ImageTk.PhotoImage(pieload)
             pieimg = tk.Label(self, image=pierender)
             pieimg.image = pierender
-            pieimg.grid(row = 1, column = 0, padx = 50, pady = 20)
+            pieimg.grid(row = 1, column = 0, padx = 10, pady = 10)
 
             histload = Image.open(IO_DIRECTORY / "current_hist.png")
             histload = histload.resize((round(1.5*PIC_SIZE), PIC_SIZE), Image.ANTIALIAS)
             histrender = ImageTk.PhotoImage(histload)
             histimg = tk.Label(self, image=histrender)
             histimg.image = histrender
-            histimg.grid(row = 1, column = 1, padx = 50, pady = 20)
+            histimg.grid(row = 1, column = 1, padx = 10, pady = 10)
         except FileNotFoundError:
+            pass
+        except IOError:
             pass
            
     def create_queue(self):
-        # sends thread to run_parallel()
+        # creates threadsafe message queue and sends thread to run_parallel()
         
         message_queue = queue.Queue()
 
@@ -317,10 +316,9 @@ class PageOne(tk.Frame):
     def start_message_queue(self, message_queue):
         # starts updating the tuple
         self.after(500, self.check_message_queue, message_queue)
-
     
     def check_message_queue(self, message_queue):
-        # starts saving values to the tuple
+        # starts saving values from the message queue to the tuple
         try:
             (era_number, number_of_partitions, champion_partition_score, max_deviation, total_time, time_limit) = message_queue.get_nowait()
             PageOne.traits = (era_number, total_time, time_limit)
@@ -333,12 +331,12 @@ class PageOne(tk.Frame):
     def status_update(self, traits):
         # displays updated report to the GUI
         try:
-            era_label = tk.Label(self, text = "Running Era #" + str(PageOne.traits[0] + 1) + "...", font = ('bold', 10))
-            era_label.grid(row = 10, column = 0, padx = 10)
+            main_label = tk.Label(self, text = "Running Era #" + str(PageOne.traits[0] + 1) + " of Genetic Algorithm...", font = ('bold', 18), padx = 10, pady = 10)
+            main_label.grid(row = 0, column = 0)
             time_elapsed_label = tk.Label(self, text = "Time elapsed (updated by era): " + str(round(PageOne.traits[1]/60,2)) + " minutes", font = ('bold', 10))
-            time_elapsed_label.grid(row = 10, column = 1, padx = 30)
+            time_elapsed_label.grid(row = 2, column = 0, padx = 10, pady = 10)
             time_remaining_label = tk.Label(self, text = "Time remaining (updated by era): " + str(round(PageOne.traits[2]/60-PageOne.traits[1]/60,2)) + " minutes", font = ('bold', 10))
-            time_remaining_label.grid(row = 10, column = 2, padx=30)
+            time_remaining_label.grid(row = 2, column = 1, padx = 10, pady = 10)
         except IndexError:
             pass
 
