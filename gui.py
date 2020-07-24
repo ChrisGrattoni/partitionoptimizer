@@ -133,7 +133,7 @@ class Window(tk.Tk):
             
             self.show_frame(self.current_frame) 
         
-        self.after(1000, self.update)
+        #self.after(1000, self.update)
 
 # the default landing page of the GUI        
 class StartPage(tk.Frame):
@@ -233,7 +233,7 @@ class StartPage(tk.Frame):
         # call the yaml_writer method to write changes to 'settings.yaml'
         Reports.yaml_writer(settings_dict)
 
-        PageOne_frame.create_queue()
+        PageOne_frame.create_queue(controller)
 
         # commented out the progress bar for now, since it jumps 
         # in the frame when the redraw happens
@@ -311,7 +311,7 @@ class PageOne(tk.Frame):
         except IOError:
             pass
            
-    def create_queue(self):
+    def create_queue(self, controller):
         # creates threadsafe message queue and sends thread to run_parallel()
         
         message_queue = queue.Queue()
@@ -319,22 +319,23 @@ class PageOne(tk.Frame):
         new_thread = threading.Thread(target = ParallelGeneticAlgorithm.run_parallel, args = (message_queue,))
         new_thread.start()
 
-        self.start_message_queue(message_queue)
+        self.start_message_queue(message_queue, controller)
         PageOne.traits = (0, 0, settings_dict["time_limit"]*60)
         
-    def start_message_queue(self, message_queue):
+    def start_message_queue(self, message_queue, controller):
         # starts updating the tuple
-        self.after(500, self.check_message_queue, message_queue)
+        self.after(500, self.check_message_queue, message_queue, controller)
     
-    def check_message_queue(self, message_queue):
+    def check_message_queue(self, message_queue, controller):
         # starts saving values from the message queue to the tuple
         try:
             (era_number, number_of_partitions, champion_partition_score, max_deviation, total_time, time_limit) = message_queue.get_nowait()
             PageOne.traits = (era_number, total_time, time_limit)
+            controller.update()
         except queue.Empty:
             pass
         finally:
-            self.after(1000, self.check_message_queue, message_queue)
+            self.after(1000, self.check_message_queue, message_queue, controller)
     
     
     def status_update(self, traits):
@@ -3301,15 +3302,15 @@ class ParallelGeneticAlgorithm(GeneticAlgorithm):
             max_deviation = load_schedule.get_max_deviation()
             time_limit_seconds = 60 * cls.time_limit
 
-            if (USE_GUI):
-                queue_tuple = (era_number, cls.number_of_partitions, champion_partition_score, max_deviation, total_time, time_limit_seconds)
-                message_queue.put(queue_tuple)
-                
             # create a pie chart
             Reports.create_pie_chart(era_number, champion_fitness_score, champion_in_compliance, total_courses)
 
             # create a histogram
             Reports.create_histogram(era_number, cls.number_of_partitions, champion_partition_score, max_deviation, total_time, time_limit_seconds)
+
+            if (USE_GUI):
+                queue_tuple = (era_number, cls.number_of_partitions, champion_partition_score, max_deviation, total_time, time_limit_seconds)
+                message_queue.put(queue_tuple)
 
             progress = Reports.return_era_progress(era_number, start_timer, end_timer, total_time)
             print(progress)
