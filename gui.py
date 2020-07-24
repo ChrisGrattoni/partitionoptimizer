@@ -91,6 +91,12 @@ class Window(tk.Tk):
         # the dimensions of the window (default 600 px by 400 px)
         self.geometry(str(WINDOW_WIDTH) + 'x400') 
 
+        # reload blank images into current_pie.png and current_hist.png
+        # to start off
+        blank_img = Image.open(IO_DIRECTORY / "BLANK.png")
+        blank_img.save(IO_DIRECTORY / "current_pie.png")
+        blank_img.save(IO_DIRECTORY / "current_hist.png")
+
         # a dictionary of frames
         self.frames = {}
 
