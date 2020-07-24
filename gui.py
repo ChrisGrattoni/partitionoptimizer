@@ -228,7 +228,9 @@ class StartPage(tk.Frame):
 
         PageOne_frame.create_queue()
 
-        PageOne_frame.progress_bar()
+        # commented out the progress bar for now, since it jumps 
+        # in the frame when the redraw happens
+        #PageOne_frame.progress_bar()
         
     # helper method to place text input with a label, starting value & row placement
     def text_input(self, label_text, default_value, starting_row):
@@ -2403,7 +2405,7 @@ class Reports:
 
         labels = ["In Compliance", "Out of Compliance"]
         sizes = [in_compliance, total_courses - in_compliance]
-        colorslist = ['g', 'r']
+        colorslist = ["#b0ff85", "#ff5757"]
 
         # generates a string as the label for each slice
         def pie_label_string(pct):
@@ -2418,7 +2420,7 @@ class Reports:
 
         ax.set_title(title_string + subtitle_string)
         ax.pie(sizes, labels = labels, autopct = pie_label_string,
-                colors = colorslist, startangle = 90)
+                colors = colorslist, startangle = 90, wedgeprops={"edgecolor":"k",'linewidth': 1, 'antialiased': True})
         ax.axis('equal')
 
         if (USE_GUI):
@@ -2427,6 +2429,8 @@ class Reports:
         else:
             pie_output_file = "pie_era" + str(era_number) + ".png"
             fig.savefig(pie_output_file, bbox_inches='tight')
+            
+        plt.close()
         
     @classmethod
     def create_histogram(cls, era_number, num_partitions, best_partition_score, max_deviation, time_elapsed, time_limit):
@@ -2488,6 +2492,8 @@ class Reports:
         else:
             hist_output_file = "hist_era" + str(era_number) + ".png"
             fig.savefig(hist_output_file, bbox_inches='tight')
+            
+        plt.close()
     
     @classmethod
     def yaml_writer(cls, settings_dict):
