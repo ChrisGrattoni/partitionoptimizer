@@ -50,6 +50,7 @@ from matplotlib import colors # used to style graphs/charts
 import matplotlib
 from PIL import Image, ImageTk
 from datetime import datetime #just used to test that the pie chart is updating
+import shutil # delete directory of output images on a new run
 
 # number of processes to launch (must be >= 4)
 NUMBER_OF_PROCESSES = multiprocessing.cpu_count()
@@ -2427,9 +2428,35 @@ class Reports:
             pie_output_file = IO_DIRECTORY / 'current_pie.png'
             fig.savefig(pie_output_file, bbox_inches='tight')
         else:
-            pie_output_file = "pie_era" + str(era_number) + ".png"
-            fig.savefig(pie_output_file, bbox_inches='tight')
+            # the directory where we will put the pie charts
+            pie_path = IO_DIRECTORY / "piecharts"
             
+            # try to create the directory 
+            try:
+                os.mkdir(pie_path)
+            # unless it already exists
+            except FileExistsError:
+                # if the directory already exists, check if this is the 
+                # beginning of a new run (Era # is 1)
+                if era_number == 1:
+                    # if so, remove the directory and all its contents
+                    shutil.rmtree(pie_path)
+                    # wait for this os operation to finish
+                    while os.path.exists(pie_path): # check if it exists
+                        pass
+                    # then create a new (empty) folder to put pie charts in 
+                    os.mkdir(pie_path)
+            
+            # the filename for the pie chart
+            pie_filename = "pie_era" + str(era_number) + ".png"
+            
+            # the path for the pie chart
+            pie_output_file = pie_path / pie_filename
+            
+            # save the pie chart
+            fig.savefig(pie_output_file, bbox_inches='tight')
+        
+        # close the plot so it doesn't continue to sit in memory
         plt.close()
         
     @classmethod
@@ -2490,9 +2517,35 @@ class Reports:
             hist_output_file = IO_DIRECTORY / 'current_hist.png'
             fig.savefig(hist_output_file, bbox_inches='tight')
         else:
-            hist_output_file = "hist_era" + str(era_number) + ".png"
-            fig.savefig(hist_output_file, bbox_inches='tight')
+            # the directory where we will put the histogram
+            histogram_path = IO_DIRECTORY / "histograms"
             
+            # try to create the directory 
+            try:
+                os.mkdir(histogram_path)
+            # unless it already exists
+            except FileExistsError:
+                # if the directory already exists, check if this is the 
+                # beginning of a new run (Era # is 1)
+                if era_number == 1:
+                    # if so, remove the directory and all its contents
+                    shutil.rmtree(histogram_path)
+                    # wait for this os operation to finish
+                    while os.path.exists(histogram_path): # check if it exists
+                        pass
+                    # then create a new (empty) folder to put pie charts in 
+                    os.mkdir(histogram_path)
+            
+            # the filename for the histogram
+            hist_filename = "hist_era" + str(era_number) + ".png"
+            
+            # the path for the histogram
+            hist_output_file = histogram_path / hist_filename
+            
+            # save the histogram chart
+            fig.savefig(hist_output_file, bbox_inches='tight')
+        
+        # close the plot so it doesn't continue to sit in memory
         plt.close()
     
     @classmethod
