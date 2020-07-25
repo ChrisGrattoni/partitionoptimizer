@@ -34,6 +34,8 @@ import warnings # used in run_loop() to remind users to close output reports
                 # before running the algorithm a second time 
 import multiprocessing # run the genetic algorithm in parallel on multiple cores
 import os   # used for getting the process ID via os.getpid()
+import platform # used for opening the current directory
+import subprocess # used for opening the current directory
 from pathlib import Path # used for getting directory of SPOTS.py
 import tkinter as tk # used in the GUI
 from tkinter import * # needed to import ttk
@@ -103,7 +105,7 @@ class Window(tk.Tk):
         # TESTING PIE
         self.current_frame = StartPage
 
-        for F in (StartPage, PageOne):
+        for F in (StartPage, PageOne, EndPage):
 
             frame = F(self, self)
 
@@ -321,6 +323,7 @@ class PageOne(tk.Frame):
 
         self.start_message_queue(message_queue, controller)
         PageOne.traits = (0, 0, settings_dict["time_limit"]*60)
+        controller.update()
         
     def start_message_queue(self, message_queue, controller):
         # starts updating the tuple
@@ -332,11 +335,17 @@ class PageOne(tk.Frame):
             (era_number, number_of_partitions, champion_partition_score, max_deviation, total_time, time_limit) = message_queue.get_nowait()
             PageOne.traits = (era_number, total_time, time_limit)
             controller.update()
+
+            if (total_time >= time_limit):
+                controller.current_frame = EndPage
+                EndPage_frame = controller.get_frame(controller.current_frame)
+                EndPage_frame.display_finish(era_number)
+                controller.show_frame(controller.current_frame)
+                return
         except queue.Empty:
             pass
         finally:
             self.after(1000, self.check_message_queue, message_queue, controller)
-    
     
     def status_update(self, traits):
         # displays updated report to the GUI
@@ -358,6 +367,35 @@ class PageOne(tk.Frame):
         self.progress.grid(row = 1, column = 0)
         self.progress.start(10)
         self.popup.mainloop()
+
+# after the program is done running for the allotted amount of time, a summary page is created
+class EndPage(tk.Frame):
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+
+        results_text = "Final results have been written to course_analysis.csv and student_assignments.csv in the following directory: " + str(IO_DIRECTORY)
+        results_label = tk.Label(self, text = results_text, font = ('bold', 10), padx = 10, pady = 10)
+        results_label.grid(row = 1, column = 0)
+
+        buttonopen = tk.Button(self, text="Open Folder With Final Results",
+                            command=lambda: self.open_directory(IO_DIRECTORY))
+        buttonopen.grid(row = 2, column = 0, columnspan = 2, padx = 10, pady = 10, sticky = "NSEW")
+
+        buttonclose = tk.Button(self, text="Close Window",
+                            command=lambda: [controller.show_frame(StartPage), os._exit(0)])
+        buttonclose.grid(row = 3, column = 0, padx = 10, pady = 10, columnspan = 2, sticky="NSEW")
+
+    def display_finish(self, era_number):
+        main_label = tk.Label(self, text = "Genetic Algorithm Complete (Total # of Eras = " + str(era_number) + ")", font = ('bold', 18), padx = 0, pady = 30)
+        main_label.grid(row = 0, column = 0)
+
+    def open_directory(self, path):
+        if (platform.system() == "Windows"):
+            os.startfile(path)
+        elif (platform.system() == "Darwin"):
+            subprocess.Popen(["open", path])
+        else:
+            subprocess.Popen(["xdg-open", path])
         
 class Student:
     """
