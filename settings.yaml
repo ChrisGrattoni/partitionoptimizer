@@ -1,0 +1,62 @@
+# SCHOOL-SPECIFIC SETTINGS: 
+ 
+# Number of groups to partition students into (only 2 and 4 are implemented) 
+number_of_partitions : 4
+ 
+# Max size of a partition when dividing students into two cohorts (default = 15) 
+half_class_maximum : 15
+ 
+# Max size of a partition when dividing students into four cohorts (default = 9) 
+quarter_class_maximum : 9
+ 
+# Time measured in minutes (default = 480 min or 8 hr) 
+time_limit : 480
+ 
+# Filename of .csv file with student schedule data (default = 'example_student_data.csv') 
+# Note: does not need to be an absolute path as long as the .csv and .py are in the same folder 
+input_csv_filename : 'example_student_data.csv'
+ 
+# Filename of .csv file with required student subgrouping data (default = 'example_subgroups.csv') 
+# if no required subgroups are needed, set the value below to an empty string, REQUIRED_SUBGROUP_CSV_FILENAME = '' 
+required_subgroup_csv_filename : 'example_subgroups.csv'
+ 
+# Filename of .csv file with preferred student subgrouping data (default = None) 
+# if no required subgroups are needed, set the value below to an empty string, PREFERRED_SUBGROUP_CSV_FILENAME = '' 
+preferred_subgroup_csv_filename : ''
+ 
+# GENETIC ALGORITHM SETTINGS 
+ 
+# If you experiment with the following settings, you may happen upon a 
+# combination of values that optimizes more efficiently than the default 
+# settings in this program. If so, please share these values with me at 
+# studentpartitionoptimizer@gmail.com so I can verify and make these the 
+# new defaults. 
+ 
+# recommended range: between 0.01 and 0.05, (default = 0.01) 
+mutation_rate : 0.01
+ 
+# the optimal value here is going to depend a lot on number of cores,) 
+# so you can play around with this to see what seems to work best 
+# recommended range for a 16-core machine: 20 - 80 (default = 60) 
+population_size : 60
+ 
+# recommended range: run it for as long as you have time, or until the 
+# [number of compliant sections] metric seems to plateau out 
+# (default = 5000) 
+number_of_eras : 5000
+ 
+# with 16 cores, good results are obtained with a default value of 20 
+# but with fewer cores, you may want to increase this value 
+# recommended range: 10 - 50 (default = 20) 
+number_of_generations_per_era : 20
+ 
+# GUI SETTINGS 
+ 
+# toggle the GUI on/off using True or False 
+# (default = True) 
+use_gui : True
+ 
+# default width of the GUI window 
+# measured in pixels (default = 600) 
+window_width : 600
+ 

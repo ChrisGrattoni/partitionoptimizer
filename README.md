@@ -76,7 +76,17 @@ You can also modify the desired size of the letter partition in each classroom. 
 		# max size of a partition when dividing students into four cohorts (default = 9)
 		QUARTER_CLASS_MAXIMUM = 9
 
+<<<<<<< Updated upstream
 After making these changes, you are ready to try the program out on real data. 
+=======
+After making these changes, you are ready to try the program out on real data. If you launch from the command line, the default setting for using the graphical interface in *settings.yaml* is set to True, but advanced users may prefer to set this to False:
+
+	# toggle the GUI on/off using True or False 
+	# (default = True) 
+	use_gui : True
+	
+Users who will not be modifying the source code may prefer to launch the program using *SPOTS.exe*.
+>>>>>>> Stashed changes
 		
 ## Student Subgroup Support
 
