@@ -274,8 +274,8 @@ class StartPage(tk.Frame):
         label.configure(text="")
 
 # the page of the GUI that displays while genetic algorithm is running
+# button to force quit the interface
 class PageOne(tk.Frame):
-    # this is a placeholder for now
     traits = (0,0,0)
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
