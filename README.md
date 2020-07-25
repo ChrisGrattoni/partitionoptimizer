@@ -1,6 +1,6 @@
 ## New Since the First Version
 
-**Windows Executable:** Instead of downloading Python 3.7+, you may launch this program from *SPOTS.exe* if you are using Windows.
+**Windows Executable:** Instead of downloading Python 3.7+, you may launch this program from [SPOTS.exe](https://github.com/ChrisGrattoni/partitionoptimizer/releases/tag/v1.0.1) if you are using Windows.
 
 **Graphical Interface:** Instead of working in a command terminal, you can use an optional graphical interface.
 
@@ -43,7 +43,7 @@ To try this program with the provided example data, all you need to do is make s
 
 ![Image of Command Line SPOTS.py Launch](https://www.compsciprinciples.com/notebooks/spots_example1.PNG)
 
-Or if you prefer, you can launch the program from SPOTS.exe:
+Or if you prefer, you can launch the program from [SPOTS.exe](https://github.com/ChrisGrattoni/partitionoptimizer/releases/tag/v1.0.1):
 
 ![Image of GUI SPOTS.exe Launch](https://www.compsciprinciples.com/notebooks/spots_example2.PNG)
 
@@ -95,7 +95,7 @@ After making these changes, you are ready to try the program out on real data. I
 	# (default = True) 
 	use_gui : True
 	
-Users who will not be modifying the source code may prefer to launch the program using *SPOTS.exe*.
+Users who will not be modifying the source code may prefer to launch the program using [SPOTS.exe](https://github.com/ChrisGrattoni/partitionoptimizer/releases/tag/v1.0.1).
 		
 ## Student Subgroup Support
 
