@@ -266,7 +266,7 @@ class StartPage(tk.Frame):
 
     # a method to launch the file dialog 
     def fileDialog(self, label):
-        filename = tk.filedialog.askopenfilename(initialdir =  "IO_DIRECTORY", title = "Select A File", filetype = (("csv","*.csv"),("all files","*.*")) )
+        filename = tk.filedialog.askopenfilename(initialdir =  "IO_DIRECTORY", title = "Select A File", filetypes = (("csv","*.csv"),("all files","*.*")) )
         label.configure(text = filename)
 
     # a method to clear a label
