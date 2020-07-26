@@ -274,10 +274,8 @@ class StartPage(tk.Frame):
         label.configure(text="")
 
 # the page of the GUI that displays while genetic algorithm is running
-# Note: eventually need to create "class EndPage" for when the algorithm 
-# completes its run
+# button to force quit the interface
 class PageOne(tk.Frame):
-    # this is a placeholder for now
     traits = (0,0,0)
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
@@ -364,6 +362,7 @@ class PageOne(tk.Frame):
         self.popup.mainloop()
 
 # after the program is done running for the allotted amount of time, a summary page is created
+# with a button to open the folder with the output CSV files
 class EndPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
