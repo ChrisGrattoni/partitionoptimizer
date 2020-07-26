@@ -13,6 +13,8 @@ State governments and public health agencies have begun recommending that school
 
 Video introduction: https://youtu.be/XJFvY4-FCSc
 
+Video tutorial: https://youtu.be/7wwfFOacXC0
+
 ### What Does This Program Do?
 
 The Student Partition Optimization Tool for Schools uses a parallel genetic algorithm to assign each student at your school to a subgroup in a way that facilitates physical distancing in as many classrooms as possible. This program supports partitioning students into 2 cohorts (an A/B partition) or 4 cohorts (an A/B/C/D partition). For an A/B/C/D partition, a course at your school will be classified as "In Compliance" if it meets the following criteria:
